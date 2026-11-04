@@ -367,11 +367,14 @@ const brl = v => { v = N(v); if (v === null) return '—'; const a = Math.abs(v)
 const brlx = v => { v = N(v); return v === null ? '—' : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 2 }); };
 const pct = v => { v = N(v); return v === null ? '—' : (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%'; };
 const num = v => { v = N(v); return v === null ? '—' : v.toLocaleString('pt-BR', { maximumFractionDigits: 0 }); };
-const dBR = s => { if (!s) return '—'; const [y, m, d] = String(s).slice(0, 10).split('-'); return d ? `${d}/${m}/${y}` : s; };
+const dBR = s => { if (!s) return '—'; const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s)); return m ? `${m[3]}/${m[2]}/${m[1]}` : esc(s); };
 const mesBR = s => { if (!s) return ''; const [y, m] = String(s).split('-'); return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][Number(m) - 1] + '/' + y.slice(2); };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const hoje = () => new Date().toISOString().slice(0, 10);
+const hoje = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const diasAte = s => s ? Math.round((new Date(s + 'T00:00:00') - new Date(hoje() + 'T00:00:00')) / 86400000) : null;
+const MIME = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', heic: 'image/heic', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', txt: 'text/plain', csv: 'text/csv' };
+const mimeDe = f => f.type || MIME[(f.name.split('.').pop() || '').toLowerCase()] || 'application/pdf';
+const urlOk = u => /^https?:\/\//i.test(String(u || ''));
 const icons = () => { try { feather.replace({ width: 16, height: 16 }); } catch (e) {} };
 let toastT; function toast(msg, erro) { const t = gEl('toast'); t.textContent = msg; t.className = t.className.replace(/bg-\S+/, erro ? 'bg-red-600' : 'bg-slate-900'); t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), erro ? 6000 : 3000); }
 
@@ -649,15 +652,15 @@ function abrirFicha(id) {
     <div class="px-5 py-4 space-y-5">
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div class="kpi !p-3"><div class="kpi-label">Valor base (cota)</div><div class="kpi-value !text-lg">${brl(i.valor_base_cota)}</div><div class="kpi-sub">faixa ${brl(i.valor_min_cota)} – ${brl(i.valor_max_cota)} · ${esc(i.confianca || '')}</div></div>
-        <div class="kpi !p-3"><div class="kpi-label">Renda contratada</div><div class="kpi-value !text-lg">${brl(i.receita_contratada_mensal)}/mês</div><div class="kpi-sub">yield ${pct(i.yield_contratado)} · meta ${pct(i.meta_yield)}</div></div>
+        <div class="kpi !p-3"><div class="kpi-label">Renda contratada</div><div class="kpi-value !text-lg">${brl(i.receita_contratada_mensal)}/mês</div><div class="kpi-sub">yield ${pct(i.yield_contratado)} · meta ${pct(i.meta_yield)}${N(i.receita_intra_anual) ? ` · sem intra-grupo ${pct(i.yield_terceiros)}` : ''}</div></div>
         <div class="kpi !p-3"><div class="kpi-label">NOI realizado/ano</div><div class="kpi-value !text-lg">${brl(i.noi_realizado_anual)}</div><div class="kpi-sub">yield real. ${pct(i.yield_realizado)} · receita ${brl(i.receita_realizada_anual)}</div></div>
         <div class="kpi !p-3"><div class="kpi-label">Custa por ano</div><div class="kpi-value !text-lg">${brl((N(i.custo_carregamento_anual) || 0) + (N(i.servico_divida_anual) || 0))}</div><div class="kpi-sub">carregamento ${brl(i.custo_carregamento_anual)} + prestações ${brl(i.servico_divida_anual)}</div></div>
       </div>
-      ${i.recomendacao_motivo ? `<div class="p-3 rounded-lg bg-blue-50 border border-blue-100 text-sm text-slate-800"><b>Recomendação do CFO — ${(REC[i.recomendacao] || [i.recomendacao])[0]}:</b> ${esc(i.recomendacao_motivo)}${i.acao ? `<div class="text-xs text-slate-600 mt-1.5"><b>Ação:</b> ${esc(i.acao)}</div>` : ''}</div>` : ''}
+      ${i.recomendacao_motivo ? `<div class="p-3 rounded-lg bg-blue-50 border border-blue-100 text-sm text-slate-800"><b>Recomendação do CFO — ${esc((REC[i.recomendacao] || [i.recomendacao])[0])}:</b> ${esc(i.recomendacao_motivo)}${i.acao ? `<div class="text-xs text-slate-600 mt-1.5"><b>Ação:</b> ${esc(i.acao)}</div>` : ''}</div>` : ''}
       <div class="grid sm:grid-cols-2 gap-5">
         <div><div class="card-title mb-2">Dados</div><dl class="dl">${dd('Titular', esc(i.titular))}${dd('Participação', i.participacao < 1 ? pct(i.participacao) : '')}${dd('Matrícula', esc(i.matricula))}${dd('Inscrição', esc(i.inscricao))}${dd('Áreas', [i.area_terreno ? 'terreno ' + num(i.area_terreno) + ' m²' : '', i.area_construida ? 'construída ' + num(i.area_construida) + ' m²' : '', i.area_privativa ? 'privativa ' + num(i.area_privativa) + ' m²' : ''].filter(Boolean).join(' · '))}${dd('Aquisição', dBR(i.data_aquisicao))}${dd('Custo total', i.custo_total ? brl(i.custo_total) + (i.participacao < 1 ? ' (cota ' + brl(i.custo_total_cota) + ')' : '') : '')}${dd('Uso', esc(i.uso))}${dd('Status', esc(i.status_estrategico))}</dl></div>
         <div><div class="card-title mb-2">Marcação a mercado</div><dl class="dl">${dd('Base (100%)', brl(i.valor_base))}${dd('Faixa', brl(i.valor_min) + ' – ' + brl(i.valor_max))}${dd('Aluguel de mercado', i.aluguel_mercado_mensal ? brl(i.aluguel_mercado_mensal) + '/mês' + (i.uso_proprio ? ' (custo de oportunidade)' : '') : '')}${dd('Método', esc(i.metodo))}</dl>
-          ${mks.length ? `<details class="mt-2"><summary class="text-xs text-blue-700 cursor-pointer">${mks.length} referências de mercado</summary><ul class="text-xs text-slate-600 mt-1 space-y-1">${mks.map(m => `<li>${m.url ? `<a href="${esc(m.url)}" target="_blank" class="text-blue-700 hover:underline">` : ''}${esc(m.descricao)}${m.url ? '</a>' : ''}${m.valor ? ` — <b>${num(m.valor)} ${esc(m.unidade || '')}</b>` : ''}</li>`).join('')}</ul></details>` : ''}</div>
+          ${mks.length ? `<details class="mt-2"><summary class="text-xs text-blue-700 cursor-pointer">${mks.length} referências de mercado</summary><ul class="text-xs text-slate-600 mt-1 space-y-1">${mks.map(m => `<li>${urlOk(m.url) ? `<a href="${esc(m.url)}" target="_blank" rel="noopener noreferrer" class="text-blue-700 hover:underline">` : ''}${esc(m.descricao)}${urlOk(m.url) ? '</a>' : ''}${m.valor ? ` — <b>${num(m.valor)} ${esc(m.unidade || '')}</b>` : ''}</li>`).join('')}</ul></details>` : ''}</div>
       </div>
       <div><div class="card-head"><div class="card-title">Custos de carregamento (ano)</div></div><dl class="dl">${dd('IPTU / ITR', brlx(i.iptu_anual))}${dd('Taxa de lixo', N(i.taxa_lixo) ? brlx(i.taxa_lixo) : '')}${dd('Condomínio', N(i.condominio_anual) ? brlx(i.condominio_anual) : '')}${dd('Seguro', N(i.seguro_anual) ? brlx(i.seguro_anual) : '')}${dd('Outros', N(i.outros_anual) ? brlx(i.outros_anual) : '')}${dvs.map(d => `<dt>Dívida</dt><dd>${esc(d.credor)} — ${brlx(d.parcela_mensal)}/mês · saldo ${brl(d.saldo_estimado)} · ${esc(d.taxa || '')}</dd>`).join('')}</dl></div>
       <div><div class="card-head"><div class="card-title">Contratos (${cts.length})</div>${podeEditar() ? `<button class="btn btn-ghost btn-sm" onclick="editarContrato(null, '${id}')"><i data-feather="plus" class="w-3 h-3"></i> Contrato</button>` : ''}</div>
@@ -829,9 +832,9 @@ function modalImportarPasta() {
       const { d, f } = plano[i]; prog.textContent = `Subindo ${i + 1}/${plano.length}: ${f.name}`;
       const nome = f.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
       const path = `${d.imovel_id || 'holding'}/${d.categoria}/${d.id.slice(0, 8)}_${nome}`;
-      const { error: e1 } = await sb.storage.from('documentos').upload(path, f, { contentType: f.type || 'application/octet-stream', upsert: true });
-      if (e1) { falhas.push(f.name + ': ' + e1.message); continue; }
-      const { error: e2 } = await sb.from('documentos').update({ caminho_storage: path, tamanho_bytes: f.size, mime: f.type || null, enviado_por: EU.id }).eq('id', d.id);
+      const { error: e1 } = await sb.storage.from('documentos').upload(path, f, { contentType: mimeDe(f), upsert: false });
+      if (e1 && !/exists|duplicate/i.test(e1.message)) { falhas.push(f.name + ': ' + e1.message); continue; }
+      const { error: e2 } = await sb.from('documentos').update({ caminho_storage: path, tamanho_bytes: f.size, mime: mimeDe(f) }).eq('id', d.id);
       if (e2) { falhas.push(f.name + ' (índice): ' + e2.message); continue; }
       ok++;
     }
@@ -843,16 +846,17 @@ function modalImportarPasta() {
 
 async function abrirDoc(id) {
   const d = DB.documentos.find(x => x.id === id); if (!d?.caminho_storage) return;
-  const { data, error } = await sb.storage.from('documentos').createSignedUrl(d.caminho_storage, 600);
-  if (error) return toast('Não consegui abrir: ' + error.message, true);
-  window.open(data.signedUrl, '_blank');
+  const w = window.open('', '_blank');
+  const { data, error } = await sb.storage.from('documentos').createSignedUrl(d.caminho_storage, 120);
+  if (error) { if (w) w.close(); return toast('Não consegui abrir: ' + error.message, true); }
+  if (w) w.location = data.signedUrl; else window.open(data.signedUrl, '_blank');
 }
 async function apagarDoc(id) {
   const d = DB.documentos.find(x => x.id === id); if (!d) return;
   if (!confirm('Apagar "' + d.titulo + '" do acervo' + (d.caminho_storage ? ' e do Storage' : '') + '?')) return;
-  if (d.caminho_storage) { const { error } = await sb.storage.from('documentos').remove([d.caminho_storage]); if (error) return toast('Storage: ' + error.message, true); }
   const { error } = await sb.from('documentos').delete().eq('id', id);
   if (error) return toast('Não apagou: ' + error.message, true);
+  if (d.caminho_storage) { const { error: e2 } = await sb.storage.from('documentos').remove([d.caminho_storage]); if (e2) toast('Índice apagado, mas o arquivo ficou no Storage: ' + e2.message, true); }
   await recarregar('documentos', 'imoveis'); renderPaginaAtual(); if (gEl('drawer').classList.contains('open') && d.imovel_id) abrirFicha(d.imovel_id); toast('Documento apagado.');
 }
 function modalUpload(imovelId) {
@@ -861,7 +865,7 @@ function modalUpload(imovelId) {
     <div class="grid sm:grid-cols-2 gap-3">
       <div><label class="field-label">Imóvel</label><select name="imovel_id" class="field"><option value="">Holding / geral</option>${DB.imoveis.map(i => `<option value="${i.id}" ${i.id === imovelId ? 'selected' : ''}>${i.id} — ${esc(nomeCurto(i.id))}</option>`).join('')}</select></div>
       <div><label class="field-label">Categoria</label><select name="categoria" class="field">${Object.entries(DOCCAT).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
-      <div class="sm:col-span-2"><label class="field-label">Título</label><input name="titulo" class="field" placeholder="Ex.: Certidão de matrícula 208.797 — inteiro teor" required></div>
+      <div class="sm:col-span-2"><label class="field-label">Título</label><input name="titulo" class="field" placeholder="Ex.: Certidão de matrícula — inteiro teor" required></div>
       <div><label class="field-label">Emitido em</label><input name="emitido_em" type="date" class="field"></div>
       <div><label class="field-label">Validade (se houver)</label><input name="validade" type="date" class="field"></div>
       <div class="sm:col-span-2"><label class="field-label">Descrição</label><input name="descricao" class="field"></div>
@@ -878,19 +882,21 @@ function modalUpload(imovelId) {
   gEl('f-upload').addEventListener('submit', async ev => {
     ev.preventDefault(); if (!files.length) return toast('Escolha ao menos um arquivo.', true);
     const f = new FormData(ev.target); const im = f.get('imovel_id') || null, cat = f.get('categoria'); const btn = gEl('up-btn'); btn.disabled = true; const prog = gEl('up-prog'); prog.classList.remove('hidden');
-    let n = 0;
+    let n = 0, subidos = 0;
     for (const file of files) {
       if (file.size > 50 * 1048576) { toast(file.name + ' passa de 50 MB — pulado.', true); continue; }
       prog.textContent = `Subindo ${file.name} (${++n}/${files.length})…`;
       const nome = file.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
       const path = `${im || 'holding'}/${cat}/${Date.now()}_${nome}`;
-      const { error: e1 } = await sb.storage.from('documentos').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+      const { error: e1 } = await sb.storage.from('documentos').upload(path, file, { contentType: mimeDe(file), upsert: false });
       if (e1) { toast('Storage: ' + e1.message, true); continue; }
-      const { error: e2 } = await sb.from('documentos').insert({ imovel_id: im, categoria: cat, titulo: files.length > 1 ? `${f.get('titulo')} — ${file.name}` : f.get('titulo'), descricao: f.get('descricao') || null, caminho_storage: path, nome_arquivo: file.name, tamanho_bytes: file.size, mime: file.type || null, emitido_em: f.get('emitido_em') || null, validade: f.get('validade') || null, origem: 'upload', enviado_por: EU.id });
-      if (e2) toast('Índice: ' + e2.message, true);
+      const { error: e2 } = await sb.from('documentos').insert({ imovel_id: im, categoria: cat, titulo: files.length > 1 ? `${f.get('titulo')} — ${file.name}` : f.get('titulo'), descricao: f.get('descricao') || null, caminho_storage: path, nome_arquivo: file.name, tamanho_bytes: file.size, mime: mimeDe(file), emitido_em: f.get('emitido_em') || null, validade: f.get('validade') || null, origem: 'upload' });
+      if (e2) { toast('Índice: ' + e2.message, true); await sb.storage.from('documentos').remove([path]); continue; }
+      subidos++;
     }
-    if (im && f.get('checklist_item')) await sb.from('checklist').upsert({ imovel_id: im, item: f.get('checklist_item'), status: 'ok', observacao: 'Documento subido em ' + new Date().toLocaleDateString('pt-BR') });
-    fecharModal(); await recarregar('documentos', 'checklist', 'imoveis'); renderPaginaAtual(); if (im && gEl('drawer').classList.contains('open')) abrirFicha(im); toast('Documento(s) no acervo.');
+    if (!subidos) { btn.disabled = false; prog.textContent = 'Nenhum arquivo subiu.'; return; }
+    if (im && f.get('checklist_item')) { const { error: e3 } = await sb.from('checklist').upsert({ imovel_id: im, item: f.get('checklist_item'), status: 'ok', observacao: 'Documento subido em ' + new Date().toLocaleDateString('pt-BR') }); if (e3) toast('Checklist: ' + e3.message, true); }
+    fecharModal(); await recarregar('documentos', 'checklist', 'imoveis'); renderPaginaAtual(); if (im && gEl('drawer').classList.contains('open')) abrirFicha(im); toast(`${subidos} de ${files.length} no acervo.`);
   });
 }
 function editarChecklist(imovelId, item) {

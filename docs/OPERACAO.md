@@ -35,7 +35,8 @@ A sessão fica salva no navegador; **Sair** no rodapé da barra lateral.
   encontrados") e clique em **Subir**. O painel sobe só os arquivos do índice que ainda não estão
   no acervo; o resto da pasta é ignorado e nada é apagado. Leva alguns minutos.
 - **Subir documento**: escolhe imóvel, categoria, título, validade; arraste um ou vários
-  arquivos (até 50 MB cada). Pode marcar o item do checklist como OK no mesmo passo.
+  arquivos (PDF, imagens ou Office, até 50 MB cada). Pode marcar o item do checklist como OK no
+  mesmo passo — só acontece se ao menos um arquivo subiu de fato.
 - **Abrir**: ícone de download gera um link válido por 10 minutos.
 
 ## Contratos
@@ -56,7 +57,8 @@ A sessão fica salva no navegador; **Sair** no rodapé da barra lateral.
 ## Caixa
 
 - Realizado 2026 vem da planilha de tesouraria (carga). Lançamento manual para o que não está
-  lá. `intra_grupo` marca receita entre empresas do grupo (aparece separada).
+  lá (competência até o mês corrente; valor sempre positivo, o tipo diz o sinal). `intra_grupo`
+  marca receita entre empresas do grupo (aparece separada).
 - NOI e yield realizado anualizam pelo número de meses com movimento.
 
 ## Publicar uma mudança no painel
@@ -83,5 +85,5 @@ migração inversa; nunca editar uma migração já aplicada.
 | "acesso não liberado" | e-mail fora de `pessoas` ou inativo | admin cadastra/ativa |
 | link não chega | limite do SMTP ou spam | esperar 1 h / configurar SMTP próprio |
 | upload falha "row-level security" | papel `leitura` | pedir `operacional` ao admin |
-| upload falha "payload too large" | arquivo > 50 MB | comprimir o PDF ou deixar só indexado |
+| upload falha "payload too large" / "mime type" | arquivo > 50 MB ou tipo fora da lista | comprimir o PDF, converter para PDF ou deixar só indexado |
 | número estranho num KPI | contrato com status/tipo errado ou movimento duplicado | corrigir na origem; a view recalcula na hora |

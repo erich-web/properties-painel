@@ -29,10 +29,22 @@ pessoais (CNH, RG, certidões civis, declarações) ficaram deliberadamente fora
 **Decisão:** status `indeterminado`; a view só marca `vencido` quando `status = vigente` e
 `fim < hoje`. **Por quê:** evita inflar "contratos vencidos".
 
-## 7. Restaurante (Mercearia Campos) como intra-grupo
-**Decisão:** a receita do restaurante é marcada `intra_grupo`, contrato `intra_grupo/indeterminado`.
-Entra no realizado de VC, mas aparece separada; a receita contratada "de terceiros" não a inclui.
+## 7. Receita intra-grupo conta na renda do imóvel, mas aparece separada
+**Decisão:** o aluguel que uma empresa do grupo paga ao imóvel (ex.: restaurante na Via Campos)
+entra em `receita_contratada` e no `yield_contratado` — é caixa real da Properties, com contrato.
+A view expõe também `receita_terceiros_mensal` e `yield_terceiros` (sem intra-grupo) e a ficha
+mostra os dois. Comodato não entra em nenhum. **Pendente de confirmação do CEO:** se a visão
+oficial da meta de 8 % deve ser "terceiros" (consolidado do grupo) ou "do imóvel" (fundo).
 
 ## 8. Funções de gatilho sem EXECUTE para `authenticated`
 **Decisão:** `0006_advisors.sql`. O Postgres não checa `EXECUTE` ao disparar gatilhos; revogar
 fecha `/rest/v1/rpc/registrar_auditoria` sem quebrar nada (testado no harness).
+
+## 9. Correções da auditoria de QA (0007)
+**Decisão:** aplicar antes de publicar — `meses_realizado()` só com meses fechados; CHECKs de
+valor/meta/competência; operacional não desativa imóvel nem muda participação; nunca sem admin;
+autoria carimbada pelo servidor; checklist nasce com o imóvel; sobrescrever objeto no Storage
+só admin; bucket com limite de 50 MB e tipos permitidos. No front: escape em todo texto que
+vira HTML (XSS armazenado confirmado e fechado), checklist só vira OK quando o arquivo subiu.
+**Ficam para depois:** SRI/CSP e Tailwind compilado (precisa de rede para gerar os hashes),
+SMTP próprio + captcha no login, convenção única de cota para renda/dívida (K3).

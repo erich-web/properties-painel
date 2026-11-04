@@ -42,7 +42,7 @@ Views (SECURITY INVOKER, respeitam a RLS de quem chama):
 - `v_estoque` — imóveis disponíveis para locação.
 - `v_caixa_mensal` — realizado por mês e tipo.
 
-`meses_realizado()` conta os meses com movimento no ano para anualizar o realizado (×12/n).
+`meses_realizado()` conta os meses **fechados** com movimento nos últimos 12 para anualizar o realizado (×12/n); o mês corrente fica fora até fechar.
 
 ## Acesso
 
@@ -52,19 +52,23 @@ Views (SECURITY INVOKER, respeitam a RLS de quem chama):
   (admin + operacional) em contratos, documentos, checklist, tarefas, movimentos, alertas e
   `update` em imóveis; `delete` e qualquer escrita em pessoas, dívidas e mercado só admin;
   auditoria só admin lê.
-- Storage (`0004_storage.sql`): ler = autorizado; subir/editar = `pode_editar`; apagar = admin.
+- Storage (`0004_storage.sql`, ajustado em 0007): ler = autorizado; subir = `pode_editar`; sobrescrever e apagar = admin.
 - `0005_endurecimento.sql`: revoga tudo de `anon` em tabelas, sequências e funções (e nos
   privilégios padrão), para que uma política descuidada no futuro não exponha nada a quem não
   entrou.
 - `0006_advisors.sql`: `search_path` fixo nas funções de gatilho e `EXECUTE` revogado delas
   (gatilho não precisa). Ficam executáveis por `authenticated`, de propósito, as cinco funções
   que a RLS avalia e `registrar_acesso()`.
+- `0007_auditoria_qa.sql`: gatilhos de proteção (`proteger_imovel`, `garantir_admin`,
+  `carimbar_autor`, `criar_checklist`, `validar_movimento`), CHECKs numéricos, auditoria em
+  dívidas e mercado, `authenticated` sem TRUNCATE/TRIGGER/REFERENCES, Storage com update só
+  admin e bucket limitado (50 MB, PDF/imagens/Office).
 
 ## Front
 
 - Estado em memória (`DB`), carregado de uma vez no login (`carregarTudo`) e recarregado por
   tabela depois de cada escrita (`recarregar`).
-- Toda string do banco que vai para `innerHTML` passa por `esc()`.
+- Toda string do banco que vai para `innerHTML` passa por `esc()` (inclusive datas em texto livre); links externos só `http(s)` com `rel=noopener`. O teste de tela planta um payload de XSS na fixture e confere que não executa.
 - Upload: caminho `<imovel|holding>/<categoria>/<prefixo>_<nome sanitizado>`; o importador de
   pasta casa `webkitRelativePath` com `documentos.caminho_original` e só sobe o que está indexado
   sem arquivo. Limite de 50 MB por arquivo (Storage).
