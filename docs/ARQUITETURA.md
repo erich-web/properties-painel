@@ -63,6 +63,9 @@ Views (SECURITY INVOKER, respeitam a RLS de quem chama):
   `carimbar_autor`, `criar_checklist`, `validar_movimento`), CHECKs numéricos, auditoria em
   dívidas e mercado, `authenticated` sem TRUNCATE/TRIGGER/REFERENCES, Storage com update só
   admin e bucket limitado (50 MB, PDF/imagens/Office).
+- `0008_desempenho.sql`: políticas escritas como `(select f())` (InitPlan: uma avaliação por
+  comando, não por linha) e `meses_realizado()` calculado uma vez na view. No projeto real a
+  view de KPI caiu de ~20 s (estourava o timeout do PostgREST) para ~0,2 s.
 
 ## Front
 
