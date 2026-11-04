@@ -7,7 +7,7 @@ tarefas da semana e backlog, caixa realizado e alertas. Uso interno do time oper
 - **Front:** uma única página (`index.html`) servida pelo GitHub Pages. Sem build, sem framework:
   Tailwind (CDN), Chart.js, Feather e `supabase-js`.
 - **Back:** projeto Supabase próprio (Postgres + Auth + Storage). Toda regra de acesso é RLS no banco.
-- **Login:** link mágico por e-mail. Só entra quem está na tabela `pessoas` (allowlist).
+- **Login:** link mágico por e-mail (fluxo implícito: o link funciona em qualquer navegador). Só entra quem está na tabela `pessoas` (allowlist).
 - **Dados:** nada de número no repositório. A carga real (`supabase/seed/`) fica fora do git.
 
 ## Estrutura

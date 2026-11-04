@@ -6,7 +6,7 @@
 navegador ──(https)──► GitHub Pages: index.html (estático, público)
     │
     └─ supabase-js ──► Supabase (sa-east-1)
-                         ├─ Auth: link mágico (OTP por e-mail, PKCE)
+                         ├─ Auth: link mágico (OTP por e-mail, fluxo implícito)
                          ├─ PostgREST: tabelas e views, RLS deny-by-default
                          ├─ RPC: registrar_acesso()
                          └─ Storage: bucket privado `documentos` (URL assinada 600 s)

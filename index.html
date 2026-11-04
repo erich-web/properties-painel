@@ -414,11 +414,21 @@ function falhaFatal(t, m) { gEl('gate-fatal-t').textContent = t; gEl('gate-fatal
 async function boot() {
   icons();
   if (!CFG.url || CFG.url.startsWith('__')) { falhaFatal('Painel ainda não conectado ao banco', 'A URL e a chave do projeto Supabase não foram preenchidas no index.html.'); return; }
-  try { sb = window.supabase.createClient(CFG.url, CFG.anon, { auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true } }); }
+  // Fluxo implícito de propósito: o link do e-mail funciona em qualquer navegador
+  // (celular incluído), não só no que pediu o acesso. O token vai no fragmento
+  // da URL, que não chega ao servidor do Pages, e é apagado logo abaixo.
+  try { sb = window.supabase.createClient(CFG.url, CFG.anon, { auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true } }); }
   catch (e) { falhaFatal('Não consegui iniciar a conexão', String(e.message || e)); return; }
+  const urlErro = new URLSearchParams(location.hash.replace(/^#/, '')).get('error_description') || new URLSearchParams(location.search).get('error_description');
+  const tinhaToken = /access_token=|code=/.test(location.hash + location.search);
   const { data: { session } } = await sb.auth.getSession();
-  if (location.search.includes('code=')) history.replaceState(null, '', location.pathname + location.hash);
-  if (!session) { gateEstado('gate-form-wrap'); return; }
+  if (tinhaToken || urlErro) history.replaceState(null, '', location.pathname);
+  if (!session) {
+    gateEstado('gate-form-wrap');
+    if (urlErro) gateErro(/expired|invalid/i.test(urlErro) ? 'Esse link expirou ou já foi usado. Peça um novo abaixo.' : 'Não deu para entrar: ' + urlErro);
+    else if (tinhaToken) gateErro('O link chegou, mas a sessão não abriu. Peça um novo link e abra-o neste navegador.');
+    return;
+  }
   await entrar(session);
 }
 
