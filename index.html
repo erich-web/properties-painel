@@ -1,0 +1,1056 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>RPE Properties · Monitor de Imóveis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+if (window.tailwind) tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','ui-sans-serif','system-ui','sans-serif'] } } } };
+</script>
+<style type="text/tailwindcss">
+  @layer components {
+    .card       { @apply bg-white border border-slate-200 rounded-xl; }
+    .card-body  { @apply p-4 sm:p-5; }
+    .card-head  { @apply flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4 mb-4; }
+    .card-title { @apply text-[15px] font-semibold text-slate-900 leading-tight; }
+    .card-hint  { @apply text-xs text-slate-500 sm:text-right shrink-0 sm:max-w-[45%]; }
+
+    .kpi        { @apply card card-body; }
+    .kpi-label  { @apply text-xs font-medium text-slate-500; }
+    .kpi-value  { @apply text-xl sm:text-2xl font-bold text-slate-900 tabular-nums mt-1.5 break-words; }
+    .kpi-sub    { @apply text-xs text-slate-500 mt-1.5 leading-snug; }
+
+    .badge       { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap; }
+    .badge-blue  { @apply bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200; }
+    .badge-green { @apply bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200; }
+    .badge-amber { @apply bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200; }
+    .badge-red   { @apply bg-red-50 text-red-700 ring-1 ring-inset ring-red-200; }
+    .badge-slate { @apply bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200; }
+    .badge-violet{ @apply bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200; }
+
+    .tbl                 { @apply w-full text-sm border-collapse; }
+    .scroll-x            { @apply overflow-x-auto; }
+    .tbl th              { @apply text-[11px] font-semibold uppercase tracking-wide text-slate-500 text-left py-2.5 px-3 border-b border-slate-200 whitespace-nowrap bg-white; }
+    .tbl th.num          { @apply text-right; }
+    .tbl td              { @apply py-2.5 px-3 border-b border-slate-100 text-slate-700 align-middle; }
+    .tbl tbody tr        { @apply transition-colors duration-100; }
+    .tbl tbody tr:hover  { @apply bg-blue-50; }
+    .tbl tr.click        { @apply cursor-pointer; }
+    .tbl .num            { @apply text-right tabular-nums whitespace-nowrap; }
+    .neg                 { @apply text-red-600; }
+    .pos                 { @apply text-emerald-600; }
+
+    .nav-item        { @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer; }
+    .nav-item.active { @apply bg-blue-600 text-white hover:bg-blue-600 hover:text-white shadow-sm; }
+    .nav-count       { @apply ml-auto text-[11px] font-semibold rounded-full px-1.5 py-0.5 bg-slate-100 text-slate-600; }
+    .nav-item.active .nav-count { @apply bg-white/20 text-white; }
+
+    .btn         { @apply inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer border disabled:opacity-50 disabled:cursor-not-allowed; }
+    .btn-primary { @apply bg-blue-600 text-white border-blue-600 hover:bg-blue-700; }
+    .btn-ghost   { @apply bg-white text-slate-700 border-slate-200 hover:bg-slate-50; }
+    .btn-danger  { @apply bg-white text-rose-700 border-rose-200 hover:bg-rose-50; }
+    .btn-sm      { @apply px-2.5 py-1 text-xs rounded-md; }
+    .field       { @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500; }
+    .field-label { @apply block text-xs font-medium text-slate-600 mb-1.5; }
+    .seg         { @apply inline-flex rounded-lg border border-slate-200 bg-white p-0.5 flex-wrap; }
+    .seg button  { @apply px-3 py-1.5 text-xs font-medium text-slate-600 rounded-md transition-colors; }
+    .seg button.on { @apply bg-blue-600 text-white; }
+
+    .page       { @apply hidden px-4 sm:px-8 py-6 sm:py-7 max-w-[1500px]; }
+    .page.active{ @apply block; }
+    .page-title { @apply text-xl sm:text-2xl font-bold text-slate-900 tracking-tight; }
+    .page-sub   { @apply text-sm text-slate-500 mt-1.5 max-w-3xl leading-relaxed; }
+    .modal      { @apply hidden fixed inset-0 z-[70] bg-slate-900/50 p-3 sm:p-6 overflow-y-auto; }
+    .modal.open { @apply block; }
+    .modal-box  { @apply bg-white rounded-xl shadow-xl max-w-3xl mx-auto my-4 sm:my-10; }
+    .drawer     { @apply hidden fixed inset-y-0 right-0 z-[60] w-full max-w-2xl bg-white shadow-2xl overflow-y-auto; }
+    .drawer.open{ @apply block; }
+
+    .kan-col    { @apply bg-slate-100/70 rounded-xl p-3 min-h-[200px]; }
+    .kan-card   { @apply bg-white border border-slate-200 rounded-lg p-3 mb-2 text-sm shadow-sm hover:border-blue-300 cursor-pointer; }
+    .heat       { @apply w-7 h-7 sm:w-8 sm:h-8 rounded-md grid place-items-center text-[10px] font-bold cursor-pointer select-none; }
+    .dl         { @apply grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm; }
+    .dl dt      { @apply text-slate-500 text-xs font-medium pt-0.5; }
+    .dl dd      { @apply text-slate-800 min-w-0 break-words; }
+  }
+</style>
+<style>
+  .chart-box { position: relative; height: 300px; }
+  .chart-box.short { height: 220px; }
+  .chart-box.tall { height: 420px; }
+  @media (max-width: 640px) { .chart-box { height: 240px; } .chart-box.tall { height: 320px; } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; border: 3px solid #f8fafc; }
+  .dropzone.over { border-color: #2563eb; background: #eff6ff; }
+  @media print { aside, .no-print { display: none !important; } }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+
+<!-- ================= PORTÃO (login) ================= -->
+<div id="gate" class="fixed inset-0 z-[80] bg-slate-50 flex items-center justify-center p-4">
+  <div class="w-full max-w-sm">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 rounded-lg bg-blue-600 text-white grid place-items-center font-bold">RP</div>
+      <div><div class="font-semibold text-slate-900">RPE Properties</div><div class="text-xs text-slate-500">Monitor de Imóveis</div></div>
+    </div>
+    <div class="card card-body">
+      <div id="gate-form-wrap">
+        <h1 class="text-lg font-bold text-slate-900">Entrar</h1>
+        <p class="text-sm text-slate-500 mt-1 mb-4">Você recebe um link de acesso no e-mail cadastrado. Sem senha.</p>
+        <form id="gate-form" class="space-y-3">
+          <div><label class="field-label" for="gate-email">E-mail</label><input id="gate-email" class="field" type="email" autocomplete="email" required placeholder="nome@gruporpe.com.br"></div>
+          <button id="gate-enviar" class="btn btn-primary w-full justify-center" type="submit"><i data-feather="mail" class="w-4 h-4"></i> Receber link de acesso</button>
+        </form>
+        <p id="gate-erro" class="text-xs text-red-600 mt-3 hidden"></p>
+      </div>
+      <div id="gate-enviado" class="hidden">
+        <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 grid place-items-center mb-3"><i data-feather="check" class="w-5 h-5"></i></div>
+        <h2 class="font-semibold text-slate-900">Link enviado</h2>
+        <p class="text-sm text-slate-500 mt-1">Abra o e-mail enviado para <b id="gate-destino"></b> e clique no link. Vale por uma hora.</p>
+        <button id="gate-voltar" class="btn btn-ghost btn-sm mt-4">Usar outro e-mail</button>
+      </div>
+      <div id="gate-negado" class="hidden">
+        <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-600 grid place-items-center mb-3"><i data-feather="lock" class="w-5 h-5"></i></div>
+        <h2 class="font-semibold text-slate-900">Sem acesso</h2>
+        <p class="text-sm text-slate-500 mt-1">O e-mail <b id="gate-negado-email"></b> entrou, mas não está na lista de pessoas do painel. Peça ao administrador para cadastrar.</p>
+        <button id="gate-sair" class="btn btn-ghost btn-sm mt-4">Sair</button>
+      </div>
+      <div id="gate-carregando" class="hidden text-sm text-slate-500"><span class="inline-block w-4 h-4 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin align-middle mr-2"></span>Carregando o portfólio…</div>
+      <div id="gate-fatal" class="hidden"><h2 class="font-semibold text-red-700" id="gate-fatal-t"></h2><p class="text-sm text-slate-600 mt-1" id="gate-fatal-m"></p></div>
+    </div>
+    <p class="text-[11px] text-slate-400 mt-4 text-center">Acesso restrito. Toda alteração fica registrada com data e autor.</p>
+  </div>
+</div>
+
+<div id="backdrop" class="fixed inset-0 z-40 bg-slate-900/50 hidden lg:hidden no-print"></div>
+
+<div id="app" class="min-h-screen lg:pl-64 hidden">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col h-screen -translate-x-full lg:translate-x-0 transition-transform duration-200 no-print">
+    <div class="px-5 py-5 border-b border-slate-200">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-blue-600 text-white grid place-items-center font-bold text-sm shrink-0">RP</div>
+        <div class="min-w-0 flex-1">
+          <div class="font-semibold text-slate-900 leading-tight truncate">RPE Properties</div>
+          <div class="text-xs text-slate-500 truncate">Monitor de Imóveis</div>
+        </div>
+        <button id="btn-close-nav" class="lg:hidden text-slate-400 hover:text-slate-700 shrink-0"><i data-feather="x" class="w-5 h-5"></i></button>
+      </div>
+    </div>
+    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+      <a class="nav-item active" data-p="visao"><i data-feather="activity" class="w-4 h-4 shrink-0"></i>Visão geral</a>
+      <a class="nav-item" data-p="imoveis"><i data-feather="home" class="w-4 h-4 shrink-0"></i>Imóveis<span class="nav-count" id="nc-imoveis"></span></a>
+      <a class="nav-item" data-p="contratos"><i data-feather="file-text" class="w-4 h-4 shrink-0"></i>Contratos<span class="nav-count" id="nc-contratos"></span></a>
+      <a class="nav-item" data-p="documentos"><i data-feather="folder" class="w-4 h-4 shrink-0"></i>Documentos<span class="nav-count" id="nc-docs"></span></a>
+      <a class="nav-item" data-p="tarefas"><i data-feather="check-square" class="w-4 h-4 shrink-0"></i>Tarefas<span class="nav-count" id="nc-tarefas"></span></a>
+      <a class="nav-item" data-p="caixa"><i data-feather="dollar-sign" class="w-4 h-4 shrink-0"></i>Caixa</a>
+      <a class="nav-item" data-p="alertas"><i data-feather="alert-triangle" class="w-4 h-4 shrink-0"></i>Alertas<span class="nav-count" id="nc-alertas"></span></a>
+      <a class="nav-item" data-p="equipe" id="nav-equipe"><i data-feather="users" class="w-4 h-4 shrink-0"></i>Equipe</a>
+    </nav>
+    <div class="px-5 py-4 border-t border-slate-200 text-xs text-slate-500">
+      <div class="font-medium text-slate-800 truncate" id="eu-nome">—</div>
+      <div class="truncate" id="eu-email">—</div>
+      <div class="flex items-center justify-between mt-2"><span class="badge badge-slate" id="eu-papel">—</span><button id="btn-sair" class="text-slate-500 hover:text-slate-900">Sair</button></div>
+    </div>
+  </aside>
+
+  <!-- ================= TOPO (mobile) ================= -->
+  <header class="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 no-print">
+    <button id="btn-open-nav" class="text-slate-600"><i data-feather="menu" class="w-6 h-6"></i></button>
+    <div class="font-semibold text-slate-900">Monitor de Imóveis</div>
+  </header>
+
+  <main>
+    <!-- ================= VISÃO GERAL ================= -->
+    <section class="page active" data-page="visao">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div><h1 class="page-title">Visão geral</h1><p class="page-sub" id="visao-sub">—</p></div>
+        <div class="text-xs text-slate-500" id="visao-data"></div>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-5" id="visao-kpis"></div>
+
+      <div class="grid lg:grid-cols-3 gap-4 mt-4">
+        <div class="card lg:col-span-2"><div class="card-body">
+          <div class="card-head"><div><div class="card-title">Rentabilidade contratada × meta</div><div class="text-xs text-slate-500 mt-0.5">NOI contratado (aluguel − carregamento) sobre o valor de mercado da cota. Imóveis do fundo; uso próprio, participações e financeiro ficam fora da régua.</div></div><div class="card-hint">meta <b id="meta-txt">8%</b> a.a.</div></div>
+          <div class="chart-box tall"><canvas id="ch-meta"></canvas></div>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-head"><div class="card-title">Onde está o patrimônio</div></div>
+          <div class="chart-box short"><canvas id="ch-pizza"></canvas></div>
+          <div id="pizza-legenda" class="mt-3 space-y-1 text-xs"></div>
+        </div></div>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-4 mt-4">
+        <div class="card"><div class="card-body">
+          <div class="card-head"><div><div class="card-title">Estoque: disponível para locação</div><div class="text-xs text-slate-500 mt-0.5">O que está parado ou ocupado sem contrato — e o que renderia a mercado.</div></div><a class="text-xs text-blue-700 cursor-pointer" data-go="imoveis">ver imóveis →</a></div>
+          <div id="visao-estoque" class="space-y-2"></div>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-head"><div><div class="card-title">Recomendações do CFO por ativo</div><div class="text-xs text-slate-500 mt-0.5">Vender, alugar, decidir ou regularizar — com o motivo.</div></div></div>
+          <div id="visao-recs" class="space-y-3"></div>
+        </div></div>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-4 mt-4">
+        <div class="card"><div class="card-body">
+          <div class="card-head"><div class="card-title">Esta semana</div><a class="text-xs text-blue-700 cursor-pointer" data-go="tarefas">todas as tarefas →</a></div>
+          <div id="visao-semana" class="space-y-2"></div>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-head"><div class="card-title">Alertas de severidade alta</div><a class="text-xs text-blue-700 cursor-pointer" data-go="alertas">todos →</a></div>
+          <div id="visao-alertas" class="space-y-2"></div>
+        </div></div>
+      </div>
+
+      <div class="card mt-4"><div class="card-body">
+        <div class="card-head"><div><div class="card-title">Valor de mercado por ativo (cota do grupo)</div><div class="text-xs text-slate-500 mt-0.5">Barra = valor base; parte escura = dívida vinculada.</div></div></div>
+        <div class="chart-box tall"><canvas id="ch-valor"></canvas></div>
+      </div></div>
+    </section>
+
+    <!-- ================= IMÓVEIS ================= -->
+    <section class="page" data-page="imoveis">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div><h1 class="page-title">Imóveis</h1><p class="page-sub">Clique em um imóvel para abrir a ficha: dados, marcação, contratos, documentos, pendências e tarefas.</p></div>
+        <input id="im-busca" class="field sm:w-64" placeholder="Buscar imóvel…">
+      </div>
+      <div class="flex flex-wrap gap-2 mt-4 items-center">
+        <div class="seg" id="im-filtro-sit">
+          <button class="on" data-v="">Todos</button><button data-v="fundo">Fundo</button><button data-v="estoque">Estoque</button><button data-v="uso_proprio">Uso próprio</button><button data-v="participacao">Participações</button><button data-v="financeiro">Financeiro</button>
+        </div>
+        <div class="seg" id="im-filtro-meta">
+          <button class="on" data-v="">Qualquer meta</button><button data-v="acima">Acima</button><button data-v="abaixo">Abaixo</button><button data-v="sem_renda">Sem renda</button>
+        </div>
+      </div>
+      <div class="card mt-4"><div class="scroll-x"><table class="tbl" id="tab-imoveis"><thead><tr>
+        <th>ID</th><th>Imóvel</th><th>Situação</th><th>Uso</th><th class="num">Valor base (cota)</th><th class="num">Renda contratada/ano</th><th class="num">Yield contr.</th><th>vs meta</th><th class="num">Yield real.</th><th class="num">Dívida</th><th>Docs</th><th>Tarefas</th><th>Recomendação</th>
+      </tr></thead><tbody></tbody></table></div></div>
+    </section>
+
+    <!-- ================= CONTRATOS ================= -->
+    <section class="page" data-page="contratos">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div><h1 class="page-title">Contratos de locação</h1><p class="page-sub">Vigência, reajuste, garantia e status por unidade. Vencidos continuam valendo por prazo indeterminado, mas sem garantia nem reajuste pactuado.</p></div>
+        <button class="btn btn-primary edit-only" id="btn-novo-contrato"><i data-feather="plus" class="w-4 h-4"></i> Novo contrato</button>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-5" id="ct-kpis"></div>
+      <div class="card mt-4"><div class="card-body">
+        <div class="card-head"><div class="card-title">Agenda: vence ou reajusta nos próximos 90 dias</div></div>
+        <div id="ct-agenda" class="space-y-2"></div>
+      </div></div>
+      <div class="flex flex-wrap gap-2 mt-4 items-center">
+        <div class="seg" id="ct-filtro"><button class="on" data-v="">Todos</button><button data-v="vencido">Vencidos</button><button data-v="vigente">Vigentes</button><button data-v="indeterminado">Prazo indeterminado</button><button data-v="minuta">Sem contrato</button></div>
+        <select id="ct-imovel" class="field sm:w-64"><option value="">Todos os imóveis</option></select>
+      </div>
+      <div class="card mt-4"><div class="scroll-x"><table class="tbl" id="tab-contratos"><thead><tr>
+        <th>Imóvel</th><th>Unidade</th><th>Locatário</th><th>Tipo</th><th class="num">Aluguel/mês</th><th>Início</th><th>Fim</th><th>Índice</th><th>Garantia</th><th>Status</th><th></th>
+      </tr></thead><tbody></tbody></table></div></div>
+    </section>
+
+    <!-- ================= DOCUMENTOS ================= -->
+    <section class="page" data-page="documentos">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div><h1 class="page-title">Documentos</h1><p class="page-sub">Pendências por imóvel e o acervo. Clique numa célula do mapa para mudar o status; arraste arquivos para subir.</p><p class="text-xs text-slate-500 mt-1" id="doc-acervo"></p></div>
+        <div class="flex gap-2"><button class="btn btn-ghost edit-only" id="btn-importar"><i data-feather="folder" class="w-4 h-4"></i> Importar da pasta</button><button class="btn btn-primary edit-only" id="btn-upload"><i data-feather="upload" class="w-4 h-4"></i> Subir documento</button></div>
+      </div>
+      <div class="card mt-5"><div class="card-body">
+        <div class="card-head"><div><div class="card-title">Mapa de pendências documentais</div><div class="text-xs text-slate-500 mt-0.5">Verde = ok · amarelo = pendente/parcial · vermelho = vencido · cinza-escuro = falta · cinza-claro = não se aplica</div></div><div class="card-hint" id="doc-score"></div></div>
+        <div class="scroll-x"><div id="heat"></div></div>
+      </div></div>
+      <div class="flex flex-wrap gap-2 mt-4 items-center">
+        <select id="doc-imovel" class="field sm:w-64"><option value="">Todos os imóveis</option></select>
+        <select id="doc-cat" class="field sm:w-48"><option value="">Todas as categorias</option></select>
+        <input id="doc-busca" class="field sm:w-64" placeholder="Buscar documento…">
+      </div>
+      <div class="card mt-4"><div class="scroll-x"><table class="tbl" id="tab-docs"><thead><tr>
+        <th>Imóvel</th><th>Categoria</th><th>Documento</th><th>Emitido</th><th>Validade</th><th>Origem</th><th class="num">Tamanho</th><th></th>
+      </tr></thead><tbody></tbody></table></div></div>
+    </section>
+
+    <!-- ================= TAREFAS ================= -->
+    <section class="page" data-page="tarefas">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div><h1 class="page-title">Tarefas</h1><p class="page-sub">O que precisa acontecer nesta semana e o backlog. As marcadas <span class="badge badge-violet">CFO</span> são sugestões do monitor — promova para a semana, atribua e feche.</p></div>
+        <button class="btn btn-primary edit-only" id="btn-nova-tarefa"><i data-feather="plus" class="w-4 h-4"></i> Nova tarefa</button>
+      </div>
+      <div class="flex flex-wrap gap-2 mt-4 items-center">
+        <select id="tf-imovel" class="field sm:w-64"><option value="">Todos os imóveis</option></select>
+        <select id="tf-resp" class="field sm:w-56"><option value="">Qualquer responsável</option></select>
+        <label class="text-xs text-slate-600 flex items-center gap-2"><input type="checkbox" id="tf-concluidas"> mostrar concluídas</label>
+      </div>
+      <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-3 mt-4" id="kanban"></div>
+    </section>
+
+    <!-- ================= CAIXA ================= -->
+    <section class="page" data-page="caixa">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div><h1 class="page-title">Caixa realizado</h1><p class="page-sub">Receita, despesas, obra e serviço da dívida por imóvel e mês, a partir da tesouraria. Lance os meses novos aqui para manter o yield realizado vivo.</p></div>
+        <button class="btn btn-primary edit-only" id="btn-novo-mov"><i data-feather="plus" class="w-4 h-4"></i> Lançar mês</button>
+      </div>
+      <div class="flex flex-wrap gap-2 mt-4 items-center">
+        <select id="cx-imovel" class="field sm:w-64"><option value="">Portfólio (todos os imóveis)</option><option value="__holding__">Estrutura (holding)</option></select>
+      </div>
+      <div class="grid lg:grid-cols-3 gap-4 mt-4">
+        <div class="card lg:col-span-2"><div class="card-body"><div class="card-head"><div class="card-title" id="cx-titulo">Mês a mês</div></div><div class="chart-box"><canvas id="ch-caixa"></canvas></div></div></div>
+        <div class="card"><div class="card-body"><div class="card-head"><div class="card-title">Acumulado no período</div></div><div id="cx-resumo" class="dl"></div></div></div>
+      </div>
+      <div class="card mt-4"><div class="card-body"><div class="card-head"><div class="card-title">NOI e yield realizado por imóvel (anualizado)</div></div>
+        <div class="scroll-x"><table class="tbl" id="tab-caixa"><thead><tr><th>ID</th><th>Imóvel</th><th class="num">Receita/ano</th><th class="num">Opex/ano</th><th class="num">NOI/ano</th><th class="num">Dívida paga/ano</th><th class="num">Capex/ano</th><th class="num">Yield real.</th><th class="num">Yield contr.</th><th>vs meta</th></tr></thead><tbody></tbody></table></div>
+      </div></div>
+      <div class="card mt-4"><div class="card-body"><div class="card-head"><div class="card-title">Lançamentos</div><div class="card-hint" id="cx-lanc-hint"></div></div>
+        <div class="scroll-x"><table class="tbl" id="tab-mov"><thead><tr><th>Mês</th><th>Imóvel</th><th>Tipo</th><th>Grupo</th><th>Subgrupo</th><th class="num">Valor</th><th>Origem</th></tr></thead><tbody></tbody></table></div>
+      </div></div>
+    </section>
+
+    <!-- ================= ALERTAS ================= -->
+    <section class="page" data-page="alertas">
+      <div><h1 class="page-title">Alertas</h1><p class="page-sub">Pontos que pedem decisão ou regularização, com prazo sugerido. Marque como resolvido quando fechar.</p></div>
+      <div class="flex flex-wrap gap-2 mt-4 items-center">
+        <div class="seg" id="al-filtro"><button class="on" data-v="aberto">Abertos</button><button data-v="resolvido">Resolvidos</button></div>
+        <div class="seg" id="al-sev"><button class="on" data-v="">Todas</button><button data-v="alta">Alta</button><button data-v="media">Média</button><button data-v="baixa">Baixa</button></div>
+      </div>
+      <div id="al-lista" class="space-y-2 mt-4"></div>
+    </section>
+
+    <!-- ================= EQUIPE ================= -->
+    <section class="page" data-page="equipe">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div><h1 class="page-title">Equipe e acessos</h1><p class="page-sub">Quem entra no painel e com que papel. <b>Leitura</b> vê tudo; <b>operacional</b> edita contratos, documentos, tarefas e caixa; <b>admin</b> também cadastra pessoas e exclui registros.</p></div>
+        <button class="btn btn-primary" id="btn-nova-pessoa"><i data-feather="user-plus" class="w-4 h-4"></i> Cadastrar pessoa</button>
+      </div>
+      <div class="card mt-5"><div class="scroll-x"><table class="tbl" id="tab-pessoas"><thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Ativo</th><th>Último acesso</th><th></th></tr></thead><tbody></tbody></table></div></div>
+      <div class="card mt-4"><div class="card-body"><div class="card-head"><div class="card-title">Últimas alterações (auditoria)</div></div>
+        <div class="scroll-x"><table class="tbl" id="tab-aud"><thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Entidade</th><th>Registro</th></tr></thead><tbody></tbody></table></div>
+      </div></div>
+    </section>
+  </main>
+</div>
+
+<!-- ================= FICHA DO IMÓVEL (drawer) ================= -->
+<div id="drawer-bg" class="fixed inset-0 z-[55] bg-slate-900/40 hidden"></div>
+<div id="drawer" class="drawer"><div id="drawer-conteudo"></div></div>
+
+<!-- ================= MODAL genérico ================= -->
+<div id="modal" class="modal"><div class="modal-box"><div id="modal-conteudo"></div></div></div>
+
+<div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] hidden bg-slate-900 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg"></div>
+
+<script>
+/* =====================================================================
+   Configuração do projeto. A chave abaixo é a publishable (anon): não
+   dá acesso a nada por si — todo acesso passa pela RLS do banco.
+   ===================================================================== */
+const CFG = { url: 'https://nkeqwzkdisdralxjkufr.supabase.co', anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rZXF3emtkaXNkcmFseGprdWZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4MTY3NTIsImV4cCI6MjEwOTM5Mjc1Mn0.yDPWX3il9wLWhYfpnsKlYIREuht0ytcO2G0smDrH3d4' };
+
+/* =====================================================================
+   Utilidades
+   ===================================================================== */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+const gEl = id => document.getElementById(id);
+const N = v => (v === null || v === undefined || v === '' || isNaN(Number(v))) ? null : Number(v);
+const brl = v => { v = N(v); if (v === null) return '—'; const a = Math.abs(v); const s = v < 0 ? '−' : '';
+  if (a >= 1e6) return s + 'R$ ' + (a / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: a >= 1e7 ? 1 : 2 }) + ' mi';
+  if (a >= 1e3) return s + 'R$ ' + (a / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: a >= 1e5 ? 0 : 1 }) + ' mil';
+  return s + 'R$ ' + a.toLocaleString('pt-BR', { maximumFractionDigits: 0 }); };
+const brlx = v => { v = N(v); return v === null ? '—' : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 2 }); };
+const pct = v => { v = N(v); return v === null ? '—' : (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%'; };
+const num = v => { v = N(v); return v === null ? '—' : v.toLocaleString('pt-BR', { maximumFractionDigits: 0 }); };
+const dBR = s => { if (!s) return '—'; const [y, m, d] = String(s).slice(0, 10).split('-'); return d ? `${d}/${m}/${y}` : s; };
+const mesBR = s => { if (!s) return ''; const [y, m] = String(s).split('-'); return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][Number(m) - 1] + '/' + y.slice(2); };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hoje = () => new Date().toISOString().slice(0, 10);
+const diasAte = s => s ? Math.round((new Date(s + 'T00:00:00') - new Date(hoje() + 'T00:00:00')) / 86400000) : null;
+const icons = () => { try { feather.replace({ width: 16, height: 16 }); } catch (e) {} };
+let toastT; function toast(msg, erro) { const t = gEl('toast'); t.textContent = msg; t.className = t.className.replace(/bg-\S+/, erro ? 'bg-red-600' : 'bg-slate-900'); t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), erro ? 6000 : 3000); }
+
+const SIT = { locado: ['Locado', 'green'], parcial: ['Parcialmente locado', 'amber'], disponivel: ['Disponível', 'blue'], uso_proprio: ['Uso próprio', 'slate'], uso_grupo: ['Ocupado pelo grupo', 'amber'], obra: ['Em obra', 'amber'], terreno: ['Terreno', 'slate'], participacao: ['Participação', 'violet'], financeiro: ['Financeiro', 'violet'] };
+const META = { acima: ['Acima da meta', 'green'], abaixo: ['Abaixo da meta', 'red'], sem_renda: ['Sem renda', 'amber'], uso_proprio: ['Uso próprio', 'slate'], fora_da_regua: ['Fora da régua', 'slate'] };
+const REC = { manter: ['Manter', 'slate'], alugar: ['Alugar', 'blue'], vender: ['Vender', 'red'], decidir: ['Decidir', 'amber'], regularizar: ['Regularizar', 'violet'] };
+const CSTAT = { vigente: ['Vigente', 'green'], vencido: ['Vencido', 'red'], indeterminado: ['Prazo indeterminado', 'amber'], minuta: ['Sem contrato', 'slate'], encerrado: ['Encerrado', 'slate'] };
+const CTIPO = { locacao: 'Locação', temporada: 'Temporada', comodato: 'Comodato', intra_grupo: 'Intra-grupo', arrendamento: 'Arrendamento' };
+const DOCCAT = { matricula: 'Matrícula', titulo: 'Título / escritura', iptu: 'IPTU / ITR', certidao: 'Certidão', seguro: 'Seguro', contrato: 'Contrato', licenca: 'Alvará / licença', financiamento: 'Financiamento', societario: 'Societário', obra: 'Obra', laudo: 'Laudo / avaliação', outro: 'Outro' };
+const CHK = { matricula: 'Matrícula', titulo: 'Título', iptu: 'IPTU 2026', certidao: 'Certidão', seguro: 'Seguro', receita: 'Contrato de receita', licencas: 'Alvará / habite-se', pj: 'Na PJ' };
+const CHKC = { ok: 'bg-emerald-500 text-white', pendente: 'bg-amber-400 text-slate-900', vencido: 'bg-red-500 text-white', falta: 'bg-slate-600 text-white', na: 'bg-slate-100 text-slate-400' };
+const TSTAT = { semana: 'Esta semana', andamento: 'Em andamento', backlog: 'Backlog', concluida: 'Concluídas', cancelada: 'Canceladas' };
+const PRIO = { alta: ['Alta', 'red'], media: ['Média', 'amber'], baixa: ['Baixa', 'slate'] };
+const badge = (map, k) => { const [t, c] = map[k] || [k || '—', 'slate']; return `<span class="badge badge-${c}">${esc(t)}</span>`; };
+const C = { blue: '#2563eb', green: '#10b981', amber: '#f59e0b', red: '#ef4444', slate: '#94a3b8', dark: '#0f172a', violet: '#8b5cf6', sky: '#38bdf8' };
+
+/* =====================================================================
+   Estado
+   ===================================================================== */
+let sb = null, EU = null;
+const DB = { imoveis: [], contratos: [], documentos: [], checklist: [], tarefas: [], alertas: [], dividas: [], mercado: [], pessoas: [], caixa: [], movimentos: [] };
+const charts = {};
+let META_V = 0.08;
+Chart.register({ id: 'metaLine', afterDraw(ch) { if (ch.canvas.id !== 'ch-meta') return; const x = ch.scales.x.getPixelForValue(META_V); const ctx = ch.ctx; ctx.save(); ctx.strokeStyle = C.dark; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x, ch.chartArea.top); ctx.lineTo(x, ch.chartArea.bottom); ctx.stroke(); ctx.fillStyle = C.dark; ctx.font = '11px Inter'; ctx.fillText('meta ' + pct(META_V), x + 4, ch.chartArea.top + 12); ctx.restore(); } });
+const podeEditar = () => EU && (EU.papel === 'admin' || EU.papel === 'operacional');
+const eAdmin = () => EU && EU.papel === 'admin';
+const imovel = id => DB.imoveis.find(i => i.id === id);
+const nomeCurto = id => { const i = imovel(id); return i ? i.nome.split(' — ')[0].replace(/\(.*?\)/g, '').trim() : (id || 'Portfólio'); };
+
+/* =====================================================================
+   Portão / login
+   ===================================================================== */
+function gateEstado(id) { ['gate-form-wrap', 'gate-enviado', 'gate-negado', 'gate-carregando', 'gate-fatal'].forEach(x => gEl(x).classList.toggle('hidden', x !== id)); icons(); }
+function gateErro(m) { const e = gEl('gate-erro'); e.textContent = m; e.classList.toggle('hidden', !m); }
+function falhaFatal(t, m) { gEl('gate-fatal-t').textContent = t; gEl('gate-fatal-m').textContent = m; gateEstado('gate-fatal'); gEl('gate').classList.remove('hidden'); }
+
+async function boot() {
+  icons();
+  if (!CFG.url || CFG.url.startsWith('__')) { falhaFatal('Painel ainda não conectado ao banco', 'A URL e a chave do projeto Supabase não foram preenchidas no index.html.'); return; }
+  try { sb = window.supabase.createClient(CFG.url, CFG.anon, { auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true } }); }
+  catch (e) { falhaFatal('Não consegui iniciar a conexão', String(e.message || e)); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (location.search.includes('code=')) history.replaceState(null, '', location.pathname + location.hash);
+  if (!session) { gateEstado('gate-form-wrap'); return; }
+  await entrar(session);
+}
+
+async function entrar(session) {
+  gateEstado('gate-carregando');
+  const email = (session.user.email || '').toLowerCase();
+  const { data: eu, error } = await sb.from('pessoas').select('*').eq('email', email).maybeSingle();
+  if (error) { falhaFatal('Não consegui verificar o acesso', error.message); return; }
+  if (!eu) { gEl('gate-negado-email').textContent = email; gateEstado('gate-negado'); return; }
+  EU = eu;
+  try { await sb.rpc('registrar_acesso'); } catch (e) {}
+  gEl('eu-nome').textContent = eu.nome; gEl('eu-email').textContent = eu.email; gEl('eu-papel').textContent = ({ admin: 'Admin', operacional: 'Operacional', leitura: 'Leitura' })[eu.papel];
+  gEl('nav-equipe').classList.toggle('hidden', !eAdmin());
+  $$('.edit-only').forEach(b => b.classList.toggle('hidden', !podeEditar()));
+  try { await carregarTudo(); }
+  catch (e) { falhaFatal('Não consegui carregar os dados', String(e.message || e)); return; }
+  gEl('gate').classList.add('hidden'); gEl('app').classList.remove('hidden');
+  irPara(location.hash.replace('#', '') || 'visao');
+}
+
+async function sair() { try { await sb?.auth.signOut(); } catch (e) {} location.reload(); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  gEl('gate-form').addEventListener('submit', async ev => {
+    ev.preventDefault(); gateErro('');
+    const email = gEl('gate-email').value.trim().toLowerCase(); if (!email) return;
+    const btn = gEl('gate-enviar'); btn.disabled = true; btn.textContent = 'Enviando…';
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
+    btn.disabled = false; btn.innerHTML = '<i data-feather="mail" class="w-4 h-4"></i> Receber link de acesso'; icons();
+    if (error) { gateErro(error.message.includes('rate') ? 'Muitas tentativas. Espere um minuto e tente de novo.' : 'Não consegui enviar o link: ' + error.message); return; }
+    gEl('gate-destino').textContent = email; gateEstado('gate-enviado');
+  });
+  gEl('gate-voltar').addEventListener('click', () => { gateErro(''); gateEstado('gate-form-wrap'); });
+  gEl('gate-sair').addEventListener('click', sair);
+  gEl('btn-sair').addEventListener('click', sair);
+  boot();
+});
+
+/* =====================================================================
+   Dados
+   ===================================================================== */
+async function q(p) { const { data, error } = await p; if (error) throw new Error(error.message); return data || []; }
+async function carregarTudo() {
+  const [imoveis, contratos, documentos, checklist, tarefas, alertas, dividas, mercado, pessoas, caixa] = await Promise.all([
+    q(sb.from('v_imoveis_kpi').select('*').order('valor_base', { ascending: false })),
+    q(sb.from('v_contratos_agenda').select('*').order('imovel_id').order('unidade')),
+    q(sb.from('documentos').select('*').order('criado_em', { ascending: false })),
+    q(sb.from('checklist').select('*')),
+    q(sb.from('tarefas').select('*').order('ordem').order('prazo')),
+    q(sb.from('alertas').select('*').order('severidade').order('prazo')),
+    q(sb.from('dividas').select('*')),
+    q(sb.from('mercado').select('*')),
+    q(sb.from('pessoas').select('id, nome, email, papel, ativo, ultimo_acesso').order('nome')),
+    q(sb.from('v_caixa_mensal').select('*').order('competencia')),
+  ]);
+  Object.assign(DB, { imoveis, contratos, documentos, checklist, tarefas, alertas, dividas, mercado, pessoas, caixa });
+  DB.imoveis.sort((a, b) => N(b.valor_base_cota) - N(a.valor_base_cota));
+  preencherSelects(); atualizarContadores();
+}
+async function recarregar(...tabelas) {
+  const mapa = { imoveis: ['v_imoveis_kpi', '*', 'valor_base'], contratos: ['v_contratos_agenda', '*', 'imovel_id'], documentos: ['documentos', '*', 'criado_em'], checklist: ['checklist', '*', 'imovel_id'], tarefas: ['tarefas', '*', 'ordem'], alertas: ['alertas', '*', 'severidade'], pessoas: ['pessoas', 'id, nome, email, papel, ativo, ultimo_acesso', 'nome'], caixa: ['v_caixa_mensal', '*', 'competencia'] };
+  for (const t of tabelas) { const [v, sel, ord] = mapa[t]; DB[t] = await q(sb.from(v).select(sel).order(ord)); }
+  if (tabelas.includes('imoveis')) DB.imoveis.sort((a, b) => N(b.valor_base_cota) - N(a.valor_base_cota));
+  atualizarContadores();
+}
+function preencherSelects() {
+  const ops = '<option value="">Todos os imóveis</option>' + DB.imoveis.map(i => `<option value="${i.id}">${i.id} — ${esc(nomeCurto(i.id))}</option>`).join('');
+  ['ct-imovel', 'doc-imovel', 'tf-imovel'].forEach(id => gEl(id).innerHTML = ops);
+  gEl('cx-imovel').innerHTML = '<option value="">Portfólio (todos os imóveis)</option><option value="__holding__">Estrutura (holding)</option>' + DB.imoveis.map(i => `<option value="${i.id}">${i.id} — ${esc(nomeCurto(i.id))}</option>`).join('');
+  gEl('doc-cat').innerHTML = '<option value="">Todas as categorias</option>' + Object.entries(DOCCAT).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+  gEl('tf-resp').innerHTML = '<option value="">Qualquer responsável</option>' + DB.pessoas.filter(p => p.ativo).map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join('');
+}
+function atualizarContadores() {
+  gEl('nc-imoveis').textContent = DB.imoveis.length;
+  gEl('nc-contratos').textContent = DB.contratos.filter(c => c.vencido).length || '';
+  gEl('nc-docs').textContent = DB.checklist.filter(c => ['pendente', 'vencido', 'falta'].includes(c.status)).length;
+  const atras = DB.tarefas.filter(t => ['semana', 'andamento'].includes(t.status)).length; gEl('nc-tarefas').textContent = atras || '';
+  gEl('nc-alertas').textContent = DB.alertas.filter(a => a.estado === 'aberto' && a.severidade === 'alta').length || '';
+}
+
+/* =====================================================================
+   Navegação
+   ===================================================================== */
+const RENDER = { visao: renderVisao, imoveis: renderImoveis, contratos: renderContratos, documentos: renderDocumentos, tarefas: renderTarefas, caixa: renderCaixa, alertas: renderAlertas, equipe: renderEquipe };
+function irPara(p) {
+  if (!RENDER[p]) p = 'visao';
+  if (p === 'equipe' && !eAdmin()) p = 'visao';
+  $$('.page').forEach(s => s.classList.toggle('active', s.dataset.page === p));
+  $$('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.p === p));
+  location.hash = p; fecharNav(); window.scrollTo({ top: 0 });
+  RENDER[p](); icons();
+}
+function abrirNav() { gEl('sidebar').classList.remove('-translate-x-full'); gEl('backdrop').classList.remove('hidden'); }
+function fecharNav() { gEl('sidebar').classList.add('-translate-x-full'); gEl('backdrop').classList.add('hidden'); }
+document.addEventListener('click', ev => {
+  const nav = ev.target.closest('.nav-item'); if (nav) { irPara(nav.dataset.p); return; }
+  const go = ev.target.closest('[data-go]'); if (go) { irPara(go.dataset.go); return; }
+  const fi = ev.target.closest('[data-ficha]'); if (fi) { abrirFicha(fi.dataset.ficha); return; }
+  if (ev.target.closest('#btn-open-nav')) abrirNav();
+  if (ev.target.closest('#btn-close-nav') || ev.target.id === 'backdrop') fecharNav();
+  if (ev.target.id === 'drawer-bg') fecharFicha();
+  if (ev.target.id === 'modal') fecharModal();
+  const segb = ev.target.closest('.seg button'); if (segb) { $$('button', segb.parentElement).forEach(b => b.classList.toggle('on', b === segb)); segb.parentElement.dispatchEvent(new CustomEvent('seg', { bubbles: true })); }
+});
+function abrirModal(html) { gEl('modal-conteudo').innerHTML = html; gEl('modal').classList.add('open'); icons(); }
+function fecharModal() { gEl('modal').classList.remove('open'); gEl('modal-conteudo').innerHTML = ''; }
+function fecharFicha() { gEl('drawer').classList.remove('open'); gEl('drawer-bg').classList.add('hidden'); }
+function grafico(id, cfg) { if (charts[id]) charts[id].destroy(); const el = gEl(id); if (!el) return; charts[id] = new Chart(el.getContext('2d'), cfg); }
+const gridOpts = (extra = {}) => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + (c.dataset.fmt || brl)(c.raw) } } }, ...extra });
+
+/* =====================================================================
+   VISÃO GERAL
+   ===================================================================== */
+function renderVisao() {
+  const I = DB.imoveis, fundo = I.filter(i => !i.uso_proprio && !['participacao', 'financeiro'].includes(i.situacao));
+  const sum = (arr, k) => arr.reduce((s, r) => s + (N(r[k]) || 0), 0);
+  const vb = sum(I, 'valor_base_cota'), div = sum(I, 'divida_saldo'), rc = sum(I, 'receita_contratada_anual'), noi = sum(I, 'noi_realizado_anual');
+  const vFundo = sum(fundo, 'valor_base_cota'), noiFundo = sum(fundo, 'noi_realizado_anual');
+  const estoque = I.filter(i => ['disponivel', 'parcial', 'uso_grupo'].includes(i.situacao));
+  const abaixo = fundo.filter(i => i.status_meta === 'abaixo').length, acima = fundo.filter(i => i.status_meta === 'acima').length, semRenda = fundo.filter(i => i.status_meta === 'sem_renda').length;
+  const docsPend = DB.checklist.filter(c => ['pendente', 'vencido', 'falta'].includes(c.status)).length;
+  const semana = DB.tarefas.filter(t => ['semana', 'andamento'].includes(t.status)), atras = semana.filter(t => t.prazo && diasAte(t.prazo) < 0).length;
+  const usoP = I.filter(i => i.uso_proprio);
+  gEl('visao-data').textContent = 'Atualizado em ' + new Date().toLocaleDateString('pt-BR');
+  gEl('visao-sub').textContent = `${I.length} ativos · ${fundo.length} no fundo · ${usoP.length} de uso da família · ${I.filter(i => i.situacao === 'participacao').length} participações · ${I.filter(i => i.situacao === 'financeiro').length} posições financeiras.`;
+  gEl('meta-txt').textContent = pct(fundo[0]?.meta_yield ?? 0.08);
+  const kpi = (l, v, s) => `<div class="kpi"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${s}</div></div>`;
+  gEl('visao-kpis').innerHTML =
+    kpi('Valor de mercado (cota do grupo)', brl(vb), `dívida ${brl(div)} · equity ${brl(vb - div)}`) +
+    kpi('Renda contratada / ano', brl(rc), `${pct(vFundo ? rc / vFundo : 0)} sobre o fundo · realizada ${brl(sum(I, 'receita_realizada_anual'))} (anualizada)`) +
+    kpi('NOI realizado / ano', brl(noi), `yield ${pct(vFundo ? noiFundo / vFundo : 0)} no fundo (${brl(vFundo)}) vs meta ${pct(fundo[0]?.meta_yield ?? 0.08)}`) +
+    kpi('Rentabilidade vs meta', `<span class="pos">${acima}</span> <span class="text-slate-300">/</span> <span class="neg">${abaixo}</span> <span class="text-slate-300">/</span> <span class="text-amber-600">${semRenda}</span>`, 'acima · abaixo · sem renda (imóveis do fundo)') +
+    kpi('Estoque para locação', `${estoque.length}`, `renderiam ${brl(sum(estoque, 'aluguel_mercado_anual'))}/ano a mercado`) +
+    kpi('Pendências documentais', `${docsPend}`, `score médio ${num(I.filter(i => i.score_documental != null).reduce((s, i) => s + N(i.score_documental), 0) / Math.max(1, I.filter(i => i.score_documental != null).length))}% · ${DB.checklist.filter(c => c.status === 'vencido').length} vencidos`) +
+    kpi('Tarefas da semana', `${semana.length}`, atras ? `<span class="neg">${atras} atrasada(s)</span> · ${DB.tarefas.filter(t => t.status === 'backlog').length} no backlog` : `${DB.tarefas.filter(t => t.status === 'backlog').length} no backlog`) +
+    kpi('Alertas altos abertos', `${DB.alertas.filter(a => a.estado === 'aberto' && a.severidade === 'alta').length}`, `${DB.alertas.filter(a => a.estado === 'aberto').length} abertos no total`);
+
+  // Rentabilidade × meta (barras horizontais)
+  const rows = fundo.filter(i => i.yield_contratado !== null).sort((a, b) => N(b.yield_contratado) - N(a.yield_contratado));
+  grafico('ch-meta', { type: 'bar', data: { labels: rows.map(r => r.id), datasets: [
+      { label: 'Yield contratado', data: rows.map(r => N(r.yield_contratado)), backgroundColor: rows.map(r => N(r.yield_contratado) >= N(r.meta_yield) ? C.green : (N(r.yield_contratado) > 0 ? C.amber : C.red)), fmt: pct, borderRadius: 4 },
+      { label: 'Yield a mercado', data: rows.map(r => N(r.yield_mercado)), backgroundColor: 'rgba(37,99,235,0.18)', borderColor: C.blue, borderWidth: 1, fmt: pct, borderRadius: 4 } ] },
+    options: gridOpts({ indexAxis: 'y', scales: { x: { ticks: { callback: v => pct(v) }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false } } },
+      plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + pct(c.raw) } },
+        annotationMeta: {} } }) });
+  // linha da meta (plugin registrado uma vez, lê META_V)
+  META_V = fundo[0]?.meta_yield ?? 0.08; const chM = charts['ch-meta'];
+  chM.options.plugins.tooltip.callbacks.title = items => nomeCurto(items[0].label);
+  chM.update();
+
+  // Pizza
+  const grupos = [['Fundo — gera renda', fundo.filter(i => ['locado', 'parcial'].includes(i.situacao)), C.green], ['Fundo — estoque / sem renda', fundo.filter(i => !['locado', 'parcial'].includes(i.situacao)), C.amber], ['Uso da família', usoP, C.slate], ['Participações', I.filter(i => i.situacao === 'participacao'), C.violet], ['Financeiro / offshore', I.filter(i => i.situacao === 'financeiro'), C.sky]];
+  grafico('ch-pizza', { type: 'doughnut', data: { labels: grupos.map(g => g[0]), datasets: [{ data: grupos.map(g => sum(g[1], 'valor_base_cota')), backgroundColor: grupos.map(g => g[2]), borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + brl(c.raw) + ' · ' + pct(c.raw / vb) } } } } });
+  gEl('pizza-legenda').innerHTML = grupos.map(g => `<div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background:${g[2]}"></span><span class="flex-1 text-slate-600">${g[0]}</span><b class="tabular-nums">${brl(sum(g[1], 'valor_base_cota'))}</b><span class="text-slate-400 w-10 text-right tabular-nums">${pct(sum(g[1], 'valor_base_cota') / vb)}</span></div>`).join('');
+
+  // Estoque
+  gEl('visao-estoque').innerHTML = estoque.length ? estoque.sort((a, b) => N(b.aluguel_mercado_anual) - N(a.aluguel_mercado_anual)).map(i => `
+    <div class="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:border-blue-300 cursor-pointer" data-ficha="${i.id}">
+      <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 grid place-items-center font-bold text-xs shrink-0">${i.id}</div>
+      <div class="min-w-0 flex-1"><div class="font-medium text-slate-900 truncate">${esc(nomeCurto(i.id))}</div>
+        <div class="text-xs text-slate-500 mt-0.5">${badge(SIT, i.situacao)} ${badge(REC, i.recomendacao)} · ${esc(i.bairro || i.cidade || '')}</div></div>
+      <div class="text-right shrink-0"><div class="text-sm font-semibold tabular-nums">${brl(i.aluguel_mercado_mensal)}/mês</div><div class="text-[11px] text-slate-500">a mercado · custa ${brl((N(i.custo_carregamento_anual) || 0) + (N(i.servico_divida_anual) || 0))}/ano</div></div>
+    </div>`).join('') : '<div class="text-sm text-slate-500">Nada em estoque.</div>';
+
+  // Recomendações agrupadas
+  const grp = {}; I.forEach(i => { if (i.recomendacao) (grp[i.recomendacao] = grp[i.recomendacao] || []).push(i); });
+  gEl('visao-recs').innerHTML = ['vender', 'alugar', 'decidir', 'regularizar', 'manter'].filter(k => grp[k]).map(k => `
+    <div><div class="flex items-center gap-2 mb-1.5">${badge(REC, k)}<span class="text-xs text-slate-500">${grp[k].length} ativo(s) · ${brl(sum(grp[k], 'valor_base_cota'))}</span></div>
+      <div class="flex flex-wrap gap-1.5">${grp[k].map(i => `<span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-slate-100 hover:bg-blue-50 cursor-pointer" data-ficha="${i.id}" title="${esc(i.recomendacao_motivo || '')}"><b>${i.id}</b> ${esc(nomeCurto(i.id)).slice(0, 26)}</span>`).join('')}</div></div>`).join('');
+
+  // Semana
+  gEl('visao-semana').innerHTML = semana.length ? semana.sort((a, b) => (a.prazo || '9') < (b.prazo || '9') ? -1 : 1).slice(0, 8).map(t => tarefaLinha(t)).join('') : '<div class="text-sm text-slate-500">Nenhuma tarefa na semana.</div>';
+  // Alertas altos
+  gEl('visao-alertas').innerHTML = DB.alertas.filter(a => a.estado === 'aberto' && a.severidade === 'alta').slice(0, 8).map(a => alertaLinha(a, true)).join('') || '<div class="text-sm text-slate-500">Sem alertas altos.</div>';
+
+  // Valor por ativo
+  grafico('ch-valor', { type: 'bar', data: { labels: I.map(i => i.id), datasets: [
+      { label: 'Equity', data: I.map(i => Math.max(0, N(i.valor_base_cota) - N(i.divida_saldo))), backgroundColor: I.map(i => i.uso_proprio ? C.slate : (['participacao', 'financeiro'].includes(i.situacao) ? C.violet : C.blue)), fmt: brl, borderRadius: 3 },
+      { label: 'Dívida', data: I.map(i => N(i.divida_saldo)), backgroundColor: C.dark, fmt: brl, borderRadius: 3 } ] },
+    options: gridOpts({ indexAxis: 'y', scales: { x: { stacked: true, ticks: { callback: v => brl(v) }, grid: { color: '#f1f5f9' } }, y: { stacked: true, grid: { display: false } } }, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { title: it => nomeCurto(it[0].label), label: c => ' ' + c.dataset.label + ': ' + brl(c.raw) } } } }) });
+  icons();
+}
+
+function tarefaLinha(t) {
+  const d = diasAte(t.prazo); const atras = d !== null && d < 0 && t.status !== 'concluida';
+  return `<div class="flex items-start gap-3 p-2.5 rounded-lg border border-slate-200 hover:border-blue-300 cursor-pointer" onclick="abrirTarefa('${t.id}')">
+    <div class="mt-0.5">${badge(PRIO, t.prioridade)}</div>
+    <div class="min-w-0 flex-1"><div class="text-sm text-slate-900 leading-snug">${esc(t.titulo)}</div>
+      <div class="text-xs text-slate-500 mt-0.5">${t.imovel_id ? `<b>${t.imovel_id}</b> · ` : ''}${t.categoria ? esc(t.categoria) + ' · ' : ''}${t.prazo ? (atras ? `<span class="neg">atrasada ${-d} d</span>` : `prazo ${dBR(t.prazo)}`) : 'sem prazo'}${t.responsavel_id ? ' · ' + esc(DB.pessoas.find(p => p.id === t.responsavel_id)?.nome || '') : ''}${t.origem === 'cfo' ? ' · <span class="badge badge-violet">CFO</span>' : ''}</div></div></div>`;
+}
+function alertaLinha(a, curto) {
+  const d = diasAte(a.prazo);
+  return `<div class="p-3 rounded-lg border ${a.severidade === 'alta' ? 'border-red-200 bg-red-50/40' : 'border-slate-200'}">
+    <div class="flex items-center gap-2 text-xs"><b class="text-slate-900">${a.imovel_id || 'Portfólio'}</b>${badge({ alta: ['Alta', 'red'], media: ['Média', 'amber'], baixa: ['Baixa', 'slate'] }, a.severidade)}<span class="text-slate-500">${esc(a.tema || '')}</span>${a.prazo ? `<span class="ml-auto ${d < 0 ? 'neg' : 'text-slate-500'}">até ${dBR(a.prazo)}</span>` : ''}</div>
+    <div class="text-sm text-slate-700 mt-1 leading-snug ${curto ? 'line-clamp-3' : ''}">${esc(a.texto)}</div>
+    ${!curto && podeEditar() ? `<div class="mt-2 flex gap-2">${a.estado === 'aberto' ? `<button class="btn btn-ghost btn-sm" onclick="resolverAlerta('${a.id}', true)"><i data-feather="check" class="w-3 h-3"></i> Resolver</button><button class="btn btn-ghost btn-sm" onclick="alertaParaTarefa('${a.id}')"><i data-feather="check-square" class="w-3 h-3"></i> Virar tarefa</button>` : `<button class="btn btn-ghost btn-sm" onclick="resolverAlerta('${a.id}', false)">Reabrir</button>`}</div>` : ''}
+  </div>`;
+}
+
+/* =====================================================================
+   IMÓVEIS + FICHA
+   ===================================================================== */
+let imFiltro = { sit: '', meta: '', busca: '' };
+function renderImoveis() {
+  const grupo = i => i.uso_proprio ? 'uso_proprio' : (['participacao', 'financeiro'].includes(i.situacao) ? i.situacao : (['disponivel', 'parcial', 'uso_grupo', 'terreno'].includes(i.situacao) ? 'estoque' : 'fundo'));
+  const rows = DB.imoveis.filter(i => (!imFiltro.sit || grupo(i) === imFiltro.sit || (imFiltro.sit === 'fundo' && !i.uso_proprio && !['participacao', 'financeiro'].includes(i.situacao))) && (!imFiltro.meta || i.status_meta === imFiltro.meta) && (!imFiltro.busca || (i.id + ' ' + i.nome + ' ' + (i.bairro || '') + ' ' + (i.cidade || '')).toLowerCase().includes(imFiltro.busca)));
+  $('#tab-imoveis tbody').innerHTML = rows.map(i => `<tr class="click" data-ficha="${i.id}">
+    <td class="font-semibold text-slate-900">${i.id}</td><td class="min-w-[220px]"><div class="font-medium text-slate-900">${esc(nomeCurto(i.id))}</div><div class="text-xs text-slate-500">${esc(i.bairro || '')}${i.bairro && i.cidade ? ' · ' : ''}${esc(i.cidade || '')}</div></td>
+    <td>${badge(SIT, i.situacao)}</td><td class="text-xs">${i.uso_proprio ? 'família' : (['participacao', 'financeiro'].includes(i.situacao) ? '—' : 'fundo')}</td>
+    <td class="num font-medium">${brl(i.valor_base_cota)}</td><td class="num">${brl(i.receita_contratada_anual)}</td><td class="num">${i.yield_contratado === null ? '—' : pct(i.yield_contratado)}</td><td>${badge(META, i.status_meta)}</td>
+    <td class="num">${i.yield_realizado === null ? '—' : pct(i.yield_realizado)}</td><td class="num">${N(i.divida_saldo) ? brl(i.divida_saldo) : '—'}</td>
+    <td>${i.docs_pendentes ? `<span class="badge ${i.docs_vencidos ? 'badge-red' : 'badge-amber'}">${i.docs_pendentes}</span>` : '<span class="badge badge-green">ok</span>'}</td>
+    <td>${i.tarefas_abertas ? `<span class="badge badge-blue">${i.tarefas_abertas}</span>` : ''}</td><td>${badge(REC, i.recomendacao)}</td></tr>`).join('');
+}
+gEl('im-busca').addEventListener('input', e => { imFiltro.busca = e.target.value.trim().toLowerCase(); renderImoveis(); });
+gEl('im-filtro-sit').addEventListener('seg', e => { imFiltro.sit = $('.on', e.target).dataset.v; renderImoveis(); });
+gEl('im-filtro-meta').addEventListener('seg', e => { imFiltro.meta = $('.on', e.target).dataset.v; renderImoveis(); });
+
+function abrirFicha(id) {
+  const i = imovel(id); if (!i) return;
+  const cts = DB.contratos.filter(c => c.imovel_id === id), docs = DB.documentos.filter(d => d.imovel_id === id), chk = DB.checklist.filter(c => c.imovel_id === id);
+  const tfs = DB.tarefas.filter(t => t.imovel_id === id && t.status !== 'cancelada'), als = DB.alertas.filter(a => a.imovel_id === id), dvs = DB.dividas.filter(d => d.imovel_id === id), mks = DB.mercado.filter(m => m.imovel_id === id);
+  const dd = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : '';
+  gEl('drawer-conteudo').innerHTML = `
+    <div class="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-start gap-3 z-10">
+      <div class="w-11 h-11 rounded-lg bg-blue-600 text-white grid place-items-center font-bold text-xs shrink-0">${i.id}</div>
+      <div class="min-w-0 flex-1"><div class="font-semibold text-slate-900 leading-tight">${esc(i.nome)}</div><div class="text-xs text-slate-500 mt-0.5">${esc(i.endereco || '')}</div>
+        <div class="flex flex-wrap gap-1.5 mt-2">${badge(SIT, i.situacao)} ${badge(META, i.status_meta)} ${badge(REC, i.recomendacao)} ${i.uso_proprio ? '<span class="badge badge-slate">uso da família</span>' : ''} <span class="badge badge-slate">prioridade ${i.prioridade}</span></div></div>
+      <div class="flex gap-1 shrink-0">${podeEditar() ? `<button class="btn btn-ghost btn-sm" onclick="editarImovel('${id}')"><i data-feather="edit-2" class="w-3 h-3"></i> Editar</button>` : ''}<button class="btn btn-ghost btn-sm" onclick="fecharFicha()"><i data-feather="x" class="w-4 h-4"></i></button></div>
+    </div>
+    <div class="px-5 py-4 space-y-5">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div class="kpi !p-3"><div class="kpi-label">Valor base (cota)</div><div class="kpi-value !text-lg">${brl(i.valor_base_cota)}</div><div class="kpi-sub">faixa ${brl(i.valor_min_cota)} – ${brl(i.valor_max_cota)} · ${esc(i.confianca || '')}</div></div>
+        <div class="kpi !p-3"><div class="kpi-label">Renda contratada</div><div class="kpi-value !text-lg">${brl(i.receita_contratada_mensal)}/mês</div><div class="kpi-sub">yield ${pct(i.yield_contratado)} · meta ${pct(i.meta_yield)}</div></div>
+        <div class="kpi !p-3"><div class="kpi-label">NOI realizado/ano</div><div class="kpi-value !text-lg">${brl(i.noi_realizado_anual)}</div><div class="kpi-sub">yield real. ${pct(i.yield_realizado)} · receita ${brl(i.receita_realizada_anual)}</div></div>
+        <div class="kpi !p-3"><div class="kpi-label">Custa por ano</div><div class="kpi-value !text-lg">${brl((N(i.custo_carregamento_anual) || 0) + (N(i.servico_divida_anual) || 0))}</div><div class="kpi-sub">carregamento ${brl(i.custo_carregamento_anual)} + prestações ${brl(i.servico_divida_anual)}</div></div>
+      </div>
+      ${i.recomendacao_motivo ? `<div class="p-3 rounded-lg bg-blue-50 border border-blue-100 text-sm text-slate-800"><b>Recomendação do CFO — ${(REC[i.recomendacao] || [i.recomendacao])[0]}:</b> ${esc(i.recomendacao_motivo)}${i.acao ? `<div class="text-xs text-slate-600 mt-1.5"><b>Ação:</b> ${esc(i.acao)}</div>` : ''}</div>` : ''}
+      <div class="grid sm:grid-cols-2 gap-5">
+        <div><div class="card-title mb-2">Dados</div><dl class="dl">${dd('Titular', esc(i.titular))}${dd('Participação', i.participacao < 1 ? pct(i.participacao) : '')}${dd('Matrícula', esc(i.matricula))}${dd('Inscrição', esc(i.inscricao))}${dd('Áreas', [i.area_terreno ? 'terreno ' + num(i.area_terreno) + ' m²' : '', i.area_construida ? 'construída ' + num(i.area_construida) + ' m²' : '', i.area_privativa ? 'privativa ' + num(i.area_privativa) + ' m²' : ''].filter(Boolean).join(' · '))}${dd('Aquisição', dBR(i.data_aquisicao))}${dd('Custo total', i.custo_total ? brl(i.custo_total) + (i.participacao < 1 ? ' (cota ' + brl(i.custo_total_cota) + ')' : '') : '')}${dd('Uso', esc(i.uso))}${dd('Status', esc(i.status_estrategico))}</dl></div>
+        <div><div class="card-title mb-2">Marcação a mercado</div><dl class="dl">${dd('Base (100%)', brl(i.valor_base))}${dd('Faixa', brl(i.valor_min) + ' – ' + brl(i.valor_max))}${dd('Aluguel de mercado', i.aluguel_mercado_mensal ? brl(i.aluguel_mercado_mensal) + '/mês' + (i.uso_proprio ? ' (custo de oportunidade)' : '') : '')}${dd('Método', esc(i.metodo))}</dl>
+          ${mks.length ? `<details class="mt-2"><summary class="text-xs text-blue-700 cursor-pointer">${mks.length} referências de mercado</summary><ul class="text-xs text-slate-600 mt-1 space-y-1">${mks.map(m => `<li>${m.url ? `<a href="${esc(m.url)}" target="_blank" class="text-blue-700 hover:underline">` : ''}${esc(m.descricao)}${m.url ? '</a>' : ''}${m.valor ? ` — <b>${num(m.valor)} ${esc(m.unidade || '')}</b>` : ''}</li>`).join('')}</ul></details>` : ''}</div>
+      </div>
+      <div><div class="card-head"><div class="card-title">Custos de carregamento (ano)</div></div><dl class="dl">${dd('IPTU / ITR', brlx(i.iptu_anual))}${dd('Taxa de lixo', N(i.taxa_lixo) ? brlx(i.taxa_lixo) : '')}${dd('Condomínio', N(i.condominio_anual) ? brlx(i.condominio_anual) : '')}${dd('Seguro', N(i.seguro_anual) ? brlx(i.seguro_anual) : '')}${dd('Outros', N(i.outros_anual) ? brlx(i.outros_anual) : '')}${dvs.map(d => `<dt>Dívida</dt><dd>${esc(d.credor)} — ${brlx(d.parcela_mensal)}/mês · saldo ${brl(d.saldo_estimado)} · ${esc(d.taxa || '')}</dd>`).join('')}</dl></div>
+      <div><div class="card-head"><div class="card-title">Contratos (${cts.length})</div>${podeEditar() ? `<button class="btn btn-ghost btn-sm" onclick="editarContrato(null, '${id}')"><i data-feather="plus" class="w-3 h-3"></i> Contrato</button>` : ''}</div>
+        ${cts.length ? `<div class="scroll-x"><table class="tbl"><thead><tr><th>Unidade</th><th>Locatário</th><th class="num">Aluguel</th><th>Fim</th><th>Status</th></tr></thead><tbody>${cts.map(c => `<tr class="click" onclick="editarContrato('${c.id}')"><td>${esc(c.unidade || '—')}</td><td class="max-w-[220px] truncate">${esc(c.locatario)}</td><td class="num">${brlx(c.aluguel_mensal)}</td><td>${dBR(c.fim)}</td><td>${badge(CSTAT, c.vencido ? 'vencido' : c.status)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="text-sm text-slate-500">Sem contratos.</div>'}</div>
+      <div><div class="card-head"><div class="card-title">Pendências documentais</div><div class="card-hint">score ${num(i.score_documental)}%</div></div>
+        <div class="flex flex-wrap gap-1.5">${Object.keys(CHK).map(k => { const c = chk.find(x => x.item === k); const s = c ? c.status : 'na'; return `<button class="heat !w-auto !h-auto px-2 py-1.5 ${CHKC[s]}" title="${esc(c?.observacao || '')}" onclick="${podeEditar() ? `editarChecklist('${id}','${k}')` : ''}">${CHK[k]} · ${s}</button>`; }).join('')}</div></div>
+      <div><div class="card-head"><div class="card-title">Documentos (${docs.length})</div>${podeEditar() ? `<button class="btn btn-ghost btn-sm" onclick="modalUpload('${id}')"><i data-feather="upload" class="w-3 h-3"></i> Subir</button>` : ''}</div>
+        ${docs.length ? `<div class="space-y-1">${docs.map(d => docLinha(d)).join('')}</div>` : '<div class="text-sm text-slate-500">Nenhum documento no acervo deste imóvel ainda.</div>'}</div>
+      <div><div class="card-head"><div class="card-title">Tarefas (${tfs.filter(t => t.status !== 'concluida').length} abertas)</div>${podeEditar() ? `<button class="btn btn-ghost btn-sm" onclick="editarTarefa(null, '${id}')"><i data-feather="plus" class="w-3 h-3"></i> Tarefa</button>` : ''}</div>
+        <div class="space-y-1.5">${tfs.filter(t => t.status !== 'concluida').map(t => tarefaLinha(t)).join('') || '<div class="text-sm text-slate-500">Sem tarefas abertas.</div>'}</div></div>
+      ${als.length ? `<div><div class="card-title mb-2">Alertas</div><div class="space-y-2">${als.map(a => alertaLinha(a, false)).join('')}</div></div>` : ''}
+      ${i.fontes ? `<div class="text-[11px] text-slate-400"><b>Fontes:</b> ${esc(i.fontes)}</div>` : ''}
+    </div>`;
+  gEl('drawer').classList.add('open'); gEl('drawer-bg').classList.remove('hidden'); gEl('drawer').scrollTop = 0; icons();
+}
+
+function editarImovel(id) {
+  const i = imovel(id);
+  const opt = (map, v) => Object.entries(map).map(([k, t]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${Array.isArray(t) ? t[0] : t}</option>`).join('');
+  abrirModal(`<form id="f-imovel" class="p-5 space-y-3">
+    <div class="flex items-center justify-between"><h2 class="font-semibold text-slate-900">Editar ${i.id} — ${esc(nomeCurto(id))}</h2><button type="button" class="text-slate-400" onclick="fecharModal()"><i data-feather="x"></i></button></div>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <div><label class="field-label">Situação</label><select name="situacao" class="field">${opt(SIT, i.situacao)}</select></div>
+      <div><label class="field-label">Recomendação</label><select name="recomendacao" class="field">${opt(REC, i.recomendacao)}</select></div>
+      <div><label class="field-label">Valor de mercado base (100%)</label><input name="valor_base" type="number" step="1000" class="field" value="${i.valor_base ?? ''}"></div>
+      <div><label class="field-label">Aluguel de mercado / mês</label><input name="aluguel_mercado_mensal" type="number" step="100" class="field" value="${i.aluguel_mercado_mensal ?? 0}"></div>
+      <div><label class="field-label">Meta de yield (NOI / valor)</label><input name="meta_yield" type="number" step="0.005" min="0" max="1" class="field" value="${i.meta_yield}"></div>
+      <div><label class="field-label">Prioridade</label><select name="prioridade" class="field"><option ${i.prioridade == 1 ? 'selected' : ''}>1</option><option ${i.prioridade == 2 ? 'selected' : ''}>2</option><option ${i.prioridade == 3 ? 'selected' : ''}>3</option></select></div>
+      <div><label class="field-label">Dívida (saldo)</label><input name="divida_saldo" type="number" step="1000" class="field" value="${i.divida_saldo ?? 0}"></div>
+      <div><label class="field-label">Condomínio / ano</label><input name="condominio_anual" type="number" step="100" class="field" value="${i.condominio_anual ?? 0}"></div>
+      <div><label class="field-label">IPTU / ano</label><input name="iptu_anual" type="number" step="100" class="field" value="${i.iptu_anual ?? 0}"></div>
+      <div><label class="field-label">Seguro / ano</label><input name="seguro_anual" type="number" step="100" class="field" value="${i.seguro_anual ?? 0}"></div>
+      <div class="sm:col-span-2"><label class="field-label">Uso atual</label><input name="uso" class="field" value="${esc(i.uso || '')}"></div>
+      <div class="sm:col-span-2"><label class="field-label">Motivo da recomendação</label><textarea name="recomendacao_motivo" class="field" rows="2">${esc(i.recomendacao_motivo || '')}</textarea></div>
+      <div class="sm:col-span-2"><label class="field-label">Ação recomendada</label><textarea name="acao" class="field" rows="3">${esc(i.acao || '')}</textarea></div>
+      <div class="sm:col-span-2 flex items-center gap-2"><input type="checkbox" name="uso_proprio" id="f-uso" ${i.uso_proprio ? 'checked' : ''}><label for="f-uso" class="text-sm">Patrimônio de uso da família (fora da régua de meta)</label></div>
+    </div>
+    <div class="flex justify-end gap-2 pt-2"><button type="button" class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-primary">Salvar</button></div></form>`);
+  gEl('f-imovel').addEventListener('submit', async ev => {
+    ev.preventDefault(); const f = new FormData(ev.target); const o = {};
+    for (const [k, v] of f.entries()) o[k] = ['valor_base', 'aluguel_mercado_mensal', 'meta_yield', 'prioridade', 'divida_saldo', 'condominio_anual', 'iptu_anual', 'seguro_anual'].includes(k) ? Number(v) : v;
+    o.uso_proprio = f.get('uso_proprio') === 'on';
+    const { error } = await sb.from('imoveis').update(o).eq('id', id);
+    if (error) return toast('Não salvou: ' + error.message, true);
+    fecharModal(); await recarregar('imoveis'); abrirFicha(id); renderPaginaAtual(); toast('Imóvel atualizado.');
+  });
+}
+function renderPaginaAtual() { const p = $('.page.active')?.dataset.page; if (p && RENDER[p]) { RENDER[p](); icons(); } }
+
+/* =====================================================================
+   CONTRATOS
+   ===================================================================== */
+let ctFiltro = { st: '', im: '' };
+function renderContratos() {
+  const all = DB.contratos.filter(c => c.status !== 'encerrado');
+  const venc = all.filter(c => c.vencido), ind = all.filter(c => c.status === 'indeterminado'), semG = all.filter(c => c.tipo === 'locacao' && (!c.garantia || /não|nao|n\/a/i.test(c.garantia)));
+  const kpi = (l, v, s) => `<div class="kpi"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${s}</div></div>`;
+  gEl('ct-kpis').innerHTML = kpi('Contratos ativos', all.length, `${brl(all.reduce((s, c) => s + N(c.aluguel_mensal), 0))}/mês contratados`) + kpi('Vencidos (prazo indeterminado de fato)', `<span class="${venc.length ? 'neg' : ''}">${venc.length}</span>`, `${brl(venc.reduce((s, c) => s + N(c.aluguel_mensal), 0))}/mês sem prazo nem reajuste pactuado`) + kpi('Sem garantia', semG.length, 'locações sem caução/fiança/seguro') + kpi('Sem contrato escrito', all.filter(c => c.status === 'minuta').length, 'ocupações do grupo a formalizar');
+  const ag = DB.contratos.filter(c => c.status !== 'encerrado' && ((c.fim && diasAte(c.fim) >= -30 && diasAte(c.fim) <= 90) || (c.proximo_reajuste && diasAte(c.proximo_reajuste) <= 90 && c.status !== 'minuta'))).sort((a, b) => (a.fim || a.proximo_reajuste) < (b.fim || b.proximo_reajuste) ? -1 : 1);
+  gEl('ct-agenda').innerHTML = ag.length ? ag.map(c => { const df = c.fim ? diasAte(c.fim) : null, dr = c.proximo_reajuste ? diasAte(c.proximo_reajuste) : null;
+    return `<div class="flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:border-blue-300 cursor-pointer" onclick="editarContrato('${c.id}')"><b class="text-xs w-14 shrink-0">${c.imovel_id}</b><div class="min-w-0 flex-1"><div class="text-sm truncate">${esc(c.unidade ? c.unidade + ' · ' : '')}${esc(c.locatario)}</div><div class="text-xs text-slate-500">${brlx(c.aluguel_mensal)}/mês${c.indice ? ' · ' + esc(c.indice) : ''}</div></div><div class="text-xs text-right shrink-0">${df !== null && df <= 90 ? `<div class="${df < 0 ? 'neg' : 'text-amber-600'} font-medium">${df < 0 ? 'venceu há ' + (-df) + ' d' : 'vence em ' + df + ' d'}</div>` : ''}${dr !== null && dr <= 90 && dr >= 0 ? `<div class="text-slate-500">reajuste ${mesBR(c.proximo_reajuste)}</div>` : ''}</div></div>`; }).join('') : '<div class="text-sm text-slate-500">Nada vence ou reajusta nos próximos 90 dias.</div>';
+  const rows = DB.contratos.filter(c => (!ctFiltro.im || c.imovel_id === ctFiltro.im) && (!ctFiltro.st || (ctFiltro.st === 'vencido' ? c.vencido : c.status === ctFiltro.st)));
+  $('#tab-contratos tbody').innerHTML = rows.map(c => `<tr class="click" onclick="editarContrato('${c.id}')"><td class="font-semibold">${c.imovel_id}</td><td>${esc(c.unidade || '—')}</td><td class="max-w-[260px] truncate" title="${esc(c.locatario)}">${esc(c.locatario)}</td><td class="text-xs">${CTIPO[c.tipo] || c.tipo}</td><td class="num">${brlx(c.aluguel_mensal)}</td><td>${dBR(c.inicio)}</td><td>${dBR(c.fim)}</td><td class="text-xs">${esc(c.indice || '—')}</td><td class="text-xs max-w-[160px] truncate">${esc(c.garantia || '—')}</td><td>${badge(CSTAT, c.vencido ? 'vencido' : c.status)}</td><td>${c.documento_id ? '<i data-feather="paperclip" class="w-3.5 h-3.5 text-slate-400"></i>' : ''}</td></tr>`).join('');
+  icons();
+}
+gEl('ct-filtro').addEventListener('seg', e => { ctFiltro.st = $('.on', e.target).dataset.v; renderContratos(); });
+gEl('ct-imovel').addEventListener('change', e => { ctFiltro.im = e.target.value; renderContratos(); });
+gEl('btn-novo-contrato').addEventListener('click', () => editarContrato(null));
+
+function editarContrato(id, imovelId) {
+  const c = id ? DB.contratos.find(x => x.id === id) : { imovel_id: imovelId || '', tipo: 'locacao', status: 'vigente', aluguel_mensal: 0, encargos_mensais: 0 };
+  const ro = !podeEditar();
+  const opt = (map, v) => Object.entries(map).map(([k, t]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${Array.isArray(t) ? t[0] : t}</option>`).join('');
+  const docs = DB.documentos.filter(d => d.imovel_id === c.imovel_id && d.categoria === 'contrato');
+  abrirModal(`<form id="f-contrato" class="p-5 space-y-3">
+    <div class="flex items-center justify-between"><h2 class="font-semibold text-slate-900">${id ? 'Contrato' : 'Novo contrato'}${c.imovel_id ? ' — ' + c.imovel_id : ''}</h2><button type="button" class="text-slate-400" onclick="fecharModal()"><i data-feather="x"></i></button></div>
+    <fieldset ${ro ? 'disabled' : ''} class="grid sm:grid-cols-2 gap-3">
+      <div><label class="field-label">Imóvel</label><select name="imovel_id" class="field" required>${DB.imoveis.map(i => `<option value="${i.id}" ${i.id === c.imovel_id ? 'selected' : ''}>${i.id} — ${esc(nomeCurto(i.id))}</option>`).join('')}</select></div>
+      <div><label class="field-label">Unidade (loja, apto…)</label><input name="unidade" class="field" value="${esc(c.unidade || '')}"></div>
+      <div class="sm:col-span-2"><label class="field-label">Locatário</label><input name="locatario" class="field" required value="${esc(c.locatario || '')}"></div>
+      <div><label class="field-label">Tipo</label><select name="tipo" class="field">${opt(CTIPO, c.tipo)}</select></div>
+      <div><label class="field-label">Status</label><select name="status" class="field">${opt(CSTAT, c.status)}</select></div>
+      <div><label class="field-label">Aluguel / mês</label><input name="aluguel_mensal" type="number" step="0.01" min="0" class="field" value="${c.aluguel_mensal ?? 0}"></div>
+      <div><label class="field-label">Encargos / mês (condomínio etc.)</label><input name="encargos_mensais" type="number" step="0.01" min="0" class="field" value="${c.encargos_mensais ?? 0}"></div>
+      <div><label class="field-label">Início</label><input name="inicio" type="date" class="field" value="${c.inicio || ''}"></div>
+      <div><label class="field-label">Fim</label><input name="fim" type="date" class="field" value="${c.fim || ''}"></div>
+      <div><label class="field-label">Índice de reajuste</label><input name="indice" class="field" value="${esc(c.indice || '')}" placeholder="IPCA, IGP-M…"></div>
+      <div><label class="field-label">Mês do reajuste</label><select name="mes_reajuste" class="field"><option value="">—</option>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m => `<option value="${m}" ${c.mes_reajuste == m ? 'selected' : ''}>${['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][m-1]}</option>`).join('')}</select></div>
+      <div><label class="field-label">Último reajuste</label><input name="ultimo_reajuste" type="date" class="field" value="${c.ultimo_reajuste || ''}"></div>
+      <div><label class="field-label">Garantia</label><input name="garantia" class="field" value="${esc(c.garantia || '')}" placeholder="caução, fiança, seguro-fiança…"></div>
+      <div class="sm:col-span-2"><label class="field-label">Documento (contrato assinado)</label><select name="documento_id" class="field"><option value="">—</option>${docs.map(d => `<option value="${d.id}" ${d.id === c.documento_id ? 'selected' : ''}>${esc(d.titulo)}</option>`).join('')}</select></div>
+      <div class="sm:col-span-2"><label class="field-label">Observações</label><textarea name="observacoes" class="field" rows="3">${esc(c.observacoes || '')}</textarea></div>
+    </fieldset>
+    <div class="flex justify-between gap-2 pt-2"><div>${id && eAdmin() ? `<button type="button" class="btn btn-danger btn-sm" onclick="excluir('contratos','${id}','contratos')">Excluir</button>` : ''}</div><div class="flex gap-2"><button type="button" class="btn btn-ghost" onclick="fecharModal()">Fechar</button>${ro ? '' : '<button class="btn btn-primary">Salvar</button>'}</div></div></form>`);
+  gEl('f-contrato').addEventListener('submit', async ev => {
+    ev.preventDefault(); const f = new FormData(ev.target); const o = {};
+    for (const [k, v] of f.entries()) o[k] = v === '' ? null : (['aluguel_mensal', 'encargos_mensais', 'mes_reajuste'].includes(k) ? Number(v) : v);
+    if (id) o.id = id;
+    const { error } = await sb.from('contratos').upsert(o);
+    if (error) return toast('Não salvou: ' + error.message, true);
+    fecharModal(); await recarregar('contratos', 'imoveis'); renderPaginaAtual(); if (gEl('drawer').classList.contains('open')) abrirFicha(o.imovel_id); toast('Contrato salvo.');
+  });
+}
+async function excluir(tabela, id, recarga) {
+  if (!confirm('Excluir este registro? A ação fica na auditoria.')) return;
+  const { error } = await sb.from(tabela).delete().eq('id', id);
+  if (error) return toast('Não excluiu: ' + error.message, true);
+  fecharModal(); await recarregar(recarga, 'imoveis'); renderPaginaAtual(); fecharFicha(); toast('Excluído.');
+}
+
+/* =====================================================================
+   DOCUMENTOS
+   ===================================================================== */
+let docFiltro = { im: '', cat: '', busca: '' };
+function docLinha(d) {
+  return `<div class="flex items-center gap-3 p-2 rounded-lg border border-slate-200"><i data-feather="file" class="w-4 h-4 text-slate-400 shrink-0"></i>
+    <div class="min-w-0 flex-1"><div class="text-sm text-slate-900 truncate">${esc(d.titulo)}</div><div class="text-xs text-slate-500">${DOCCAT[d.categoria] || d.categoria}${d.validade ? ` · validade ${dBR(d.validade)}${diasAte(d.validade) < 0 ? ' <span class="neg">(vencido)</span>' : ''}` : ''}${d.caminho_storage ? '' : ' · <span class="text-amber-600">só na pasta do Mac</span>'}</div></div>
+    ${d.caminho_storage ? `<button class="btn btn-ghost btn-sm" onclick="abrirDoc('${d.id}')"><i data-feather="download" class="w-3 h-3"></i></button>` : ''}${eAdmin() ? `<button class="btn btn-ghost btn-sm" onclick="apagarDoc('${d.id}')"><i data-feather="trash-2" class="w-3 h-3"></i></button>` : ''}</div>`;
+}
+function renderDocumentos() {
+  const ids = DB.imoveis.map(i => i.id), itens = Object.keys(CHK);
+  let h = `<table class="text-xs"><thead><tr><th class="text-left pr-3 pb-1 text-[11px] text-slate-500">Imóvel</th>${itens.map(k => `<th class="pb-1 px-0.5 text-[10px] font-medium text-slate-500 text-center">${CHK[k]}</th>`).join('')}<th class="pl-3 text-[11px] text-slate-500">Score</th></tr></thead><tbody>`;
+  ids.forEach(id => { const i = imovel(id); h += `<tr><td class="pr-3 py-0.5 whitespace-nowrap"><b class="cursor-pointer text-blue-700" data-ficha="${id}">${id}</b> <span class="text-slate-500 hidden md:inline">${esc(nomeCurto(id)).slice(0, 28)}</span></td>`;
+    itens.forEach(k => { const c = DB.checklist.find(x => x.imovel_id === id && x.item === k); const s = c ? c.status : 'na'; h += `<td class="px-0.5 py-0.5"><div class="heat ${CHKC[s]}" title="${CHK[k]}: ${s}${c?.observacao ? ' — ' + esc(c.observacao) : ''}" onclick="${podeEditar() ? `editarChecklist('${id}','${k}')` : ''}">${s === 'ok' ? '✓' : s === 'na' ? '·' : s === 'vencido' ? '!' : s === 'pendente' ? '~' : '×'}</div></td>`; });
+    h += `<td class="pl-3 tabular-nums">${num(i.score_documental)}%</td></tr>`; });
+  gEl('heat').innerHTML = h + '</tbody></table>';
+  const pend = DB.checklist.filter(c => ['pendente', 'vencido', 'falta'].includes(c.status)).length;
+  gEl('doc-score').innerHTML = `<b>${pend}</b> pendências em ${DB.checklist.filter(c => c.status !== 'na').length} itens aplicáveis`;
+  const soPasta = DB.documentos.filter(d => !d.caminho_storage).length;
+  gEl('doc-acervo').innerHTML = `Acervo: <b>${DB.documentos.length - soPasta}</b> no painel` + (soPasta ? ` · <span class="text-amber-700"><b>${soPasta}</b> indexados só na pasta do Mac</span> — use <b>Importar da pasta</b> para subir de uma vez` : '');
+  const rows = DB.documentos.filter(d => (!docFiltro.im || d.imovel_id === docFiltro.im) && (!docFiltro.cat || d.categoria === docFiltro.cat) && (!docFiltro.busca || (d.titulo + ' ' + (d.nome_arquivo || '') + ' ' + (d.descricao || '')).toLowerCase().includes(docFiltro.busca)));
+  $('#tab-docs tbody').innerHTML = rows.map(d => `<tr><td class="font-semibold">${d.imovel_id || '<span class="text-slate-400">holding</span>'}</td><td class="text-xs">${DOCCAT[d.categoria] || d.categoria}</td><td class="max-w-[320px]"><div class="truncate" title="${esc(d.titulo)}">${esc(d.titulo)}</div>${d.descricao ? `<div class="text-xs text-slate-500 truncate">${esc(d.descricao)}</div>` : ''}</td><td>${dBR(d.emitido_em)}</td><td class="${d.validade && diasAte(d.validade) < 0 ? 'neg' : ''}">${dBR(d.validade)}</td><td class="text-xs">${d.origem === 'pasta' ? 'pasta' : 'upload'}${d.caminho_storage ? '' : ' <span class="text-amber-600">(não subido)</span>'}</td><td class="num text-xs">${d.tamanho_bytes ? (d.tamanho_bytes / 1048576).toFixed(1) + ' MB' : '—'}</td><td class="whitespace-nowrap">${d.caminho_storage ? `<button class="btn btn-ghost btn-sm" onclick="abrirDoc('${d.id}')"><i data-feather="download" class="w-3 h-3"></i></button>` : ''}${eAdmin() ? `<button class="btn btn-ghost btn-sm" onclick="apagarDoc('${d.id}')"><i data-feather="trash-2" class="w-3 h-3"></i></button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="text-slate-500">Nenhum documento com esse filtro.</td></tr>';
+  icons();
+}
+gEl('doc-imovel').addEventListener('change', e => { docFiltro.im = e.target.value; renderDocumentos(); });
+gEl('doc-cat').addEventListener('change', e => { docFiltro.cat = e.target.value; renderDocumentos(); });
+gEl('doc-busca').addEventListener('input', e => { docFiltro.busca = e.target.value.trim().toLowerCase(); renderDocumentos(); });
+gEl('btn-upload').addEventListener('click', () => modalUpload(docFiltro.im || ''));
+gEl('btn-importar').addEventListener('click', modalImportarPasta);
+
+// Importar da pasta: casa os arquivos escolhidos (pasta inteira) com o índice
+// origem = 'pasta' e sobe só os que ainda não estão no Storage.
+const normPath = p => p.normalize('NFC').toLowerCase().replace(/\\/g, '/');
+function modalImportarPasta() {
+  const pend = DB.documentos.filter(d => d.origem === 'pasta' && !d.caminho_storage);
+  abrirModal(`<div class="p-5 space-y-3">
+    <div class="flex items-center justify-between"><h2 class="font-semibold text-slate-900">Importar da pasta</h2><button type="button" class="text-slate-400" onclick="fecharModal()"><i data-feather="x"></i></button></div>
+    <p class="text-sm text-slate-600">Escolha a pasta <b>IMÓVEIS - GRUPO RPE</b> (ou uma subpasta dela). O painel procura os <b>${pend.length}</b> documentos-chave que ainda estão só no Mac e sobe apenas esses — o resto da pasta é ignorado, nada é apagado.</p>
+    <div id="imp-zone" class="dropzone border-2 border-dashed border-slate-300 rounded-xl p-6 text-center text-sm text-slate-500 cursor-pointer"><i data-feather="folder" class="w-6 h-6 mx-auto mb-2 text-slate-400"></i><span id="imp-txt">Clique para escolher a pasta</span><input id="imp-input" type="file" webkitdirectory directory multiple class="hidden"></div>
+    <div id="imp-resumo" class="text-sm hidden"></div>
+    <div id="imp-prog" class="text-xs text-slate-500 hidden"></div>
+    <div class="flex justify-end gap-2 pt-2"><button type="button" class="btn btn-ghost" onclick="fecharModal()">Fechar</button><button type="button" class="btn btn-primary hidden" id="imp-btn">Subir</button></div></div>`);
+  const inp = gEl('imp-input'); gEl('imp-zone').addEventListener('click', () => inp.click());
+  let plano = [];
+  inp.addEventListener('change', () => {
+    const files = Array.from(inp.files); const porPath = new Map();
+    files.forEach(f => { const rel = normPath(f.webkitRelativePath || f.name); porPath.set(rel, f); const semRaiz = rel.includes('/') ? rel.slice(rel.indexOf('/') + 1) : rel; if (!porPath.has(semRaiz)) porPath.set(semRaiz, f); });
+    plano = []; let grandes = 0;
+    pend.forEach(d => { const f = porPath.get(normPath(d.caminho_original || '')); if (!f) return; if (f.size > 50 * 1048576) { grandes++; return; } plano.push({ d, f }); });
+    gEl('imp-txt').textContent = `${files.length} arquivos lidos da pasta`;
+    const r = gEl('imp-resumo'); r.classList.remove('hidden');
+    r.innerHTML = `<div class="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1"><div><b>${plano.length}</b> documentos-chave encontrados para subir (${(plano.reduce((s, x) => s + x.f.size, 0) / 1048576).toFixed(0)} MB)</div>${grandes ? `<div class="text-amber-700">${grandes} acima de 50 MB ficam só indexados (limite do Storage).</div>` : ''}${pend.length - plano.length - grandes ? `<div class="text-slate-500">${pend.length - plano.length - grandes} do índice não estão nesta seleção (escolha a pasta raiz para pegar tudo).</div>` : ''}</div>`;
+    gEl('imp-btn').classList.toggle('hidden', !plano.length); gEl('imp-btn').textContent = `Subir ${plano.length} documentos`;
+  });
+  gEl('imp-btn').addEventListener('click', async () => {
+    const btn = gEl('imp-btn'); btn.disabled = true; const prog = gEl('imp-prog'); prog.classList.remove('hidden');
+    let ok = 0, falhas = [];
+    for (let i = 0; i < plano.length; i++) {
+      const { d, f } = plano[i]; prog.textContent = `Subindo ${i + 1}/${plano.length}: ${f.name}`;
+      const nome = f.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+      const path = `${d.imovel_id || 'holding'}/${d.categoria}/${d.id.slice(0, 8)}_${nome}`;
+      const { error: e1 } = await sb.storage.from('documentos').upload(path, f, { contentType: f.type || 'application/octet-stream', upsert: true });
+      if (e1) { falhas.push(f.name + ': ' + e1.message); continue; }
+      const { error: e2 } = await sb.from('documentos').update({ caminho_storage: path, tamanho_bytes: f.size, mime: f.type || null, enviado_por: EU.id }).eq('id', d.id);
+      if (e2) { falhas.push(f.name + ' (índice): ' + e2.message); continue; }
+      ok++;
+    }
+    prog.innerHTML = `<b>${ok}</b> subidos.` + (falhas.length ? ` <span class="neg">${falhas.length} falharam:</span><br>` + falhas.map(esc).join('<br>') : '');
+    btn.classList.add('hidden');
+    await recarregar('documentos', 'imoveis'); renderPaginaAtual(); toast(`${ok} documentos no acervo.`);
+  });
+}
+
+async function abrirDoc(id) {
+  const d = DB.documentos.find(x => x.id === id); if (!d?.caminho_storage) return;
+  const { data, error } = await sb.storage.from('documentos').createSignedUrl(d.caminho_storage, 600);
+  if (error) return toast('Não consegui abrir: ' + error.message, true);
+  window.open(data.signedUrl, '_blank');
+}
+async function apagarDoc(id) {
+  const d = DB.documentos.find(x => x.id === id); if (!d) return;
+  if (!confirm('Apagar "' + d.titulo + '" do acervo' + (d.caminho_storage ? ' e do Storage' : '') + '?')) return;
+  if (d.caminho_storage) { const { error } = await sb.storage.from('documentos').remove([d.caminho_storage]); if (error) return toast('Storage: ' + error.message, true); }
+  const { error } = await sb.from('documentos').delete().eq('id', id);
+  if (error) return toast('Não apagou: ' + error.message, true);
+  await recarregar('documentos', 'imoveis'); renderPaginaAtual(); if (gEl('drawer').classList.contains('open') && d.imovel_id) abrirFicha(d.imovel_id); toast('Documento apagado.');
+}
+function modalUpload(imovelId) {
+  abrirModal(`<form id="f-upload" class="p-5 space-y-3">
+    <div class="flex items-center justify-between"><h2 class="font-semibold text-slate-900">Subir documento</h2><button type="button" class="text-slate-400" onclick="fecharModal()"><i data-feather="x"></i></button></div>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <div><label class="field-label">Imóvel</label><select name="imovel_id" class="field"><option value="">Holding / geral</option>${DB.imoveis.map(i => `<option value="${i.id}" ${i.id === imovelId ? 'selected' : ''}>${i.id} — ${esc(nomeCurto(i.id))}</option>`).join('')}</select></div>
+      <div><label class="field-label">Categoria</label><select name="categoria" class="field">${Object.entries(DOCCAT).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+      <div class="sm:col-span-2"><label class="field-label">Título</label><input name="titulo" class="field" placeholder="Ex.: Certidão de matrícula 208.797 — inteiro teor" required></div>
+      <div><label class="field-label">Emitido em</label><input name="emitido_em" type="date" class="field"></div>
+      <div><label class="field-label">Validade (se houver)</label><input name="validade" type="date" class="field"></div>
+      <div class="sm:col-span-2"><label class="field-label">Descrição</label><input name="descricao" class="field"></div>
+      <div class="sm:col-span-2"><label class="field-label">Marcar o item do checklist como OK</label><select name="checklist_item" class="field"><option value="">— não alterar —</option>${Object.entries(CHK).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+      <div class="sm:col-span-2"><div id="dropzone" class="dropzone border-2 border-dashed border-slate-300 rounded-xl p-6 text-center text-sm text-slate-500 cursor-pointer"><i data-feather="upload-cloud" class="w-6 h-6 mx-auto mb-2 text-slate-400"></i><span id="dz-txt">Arraste os arquivos aqui ou clique para escolher (PDF, imagens, Office — até 50 MB cada)</span><input id="dz-input" type="file" multiple class="hidden"></div></div>
+    </div>
+    <div id="up-prog" class="text-xs text-slate-500 hidden"></div>
+    <div class="flex justify-end gap-2 pt-2"><button type="button" class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-primary" id="up-btn">Subir</button></div></form>`);
+  const dz = gEl('dropzone'), inp = gEl('dz-input'); let files = [];
+  const mostrar = () => { gEl('dz-txt').textContent = files.length ? files.map(f => f.name).join(', ') : 'Arraste os arquivos aqui ou clique para escolher'; };
+  dz.addEventListener('click', () => inp.click()); inp.addEventListener('change', () => { files = Array.from(inp.files); mostrar(); });
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); }); dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); files = Array.from(e.dataTransfer.files); mostrar(); });
+  gEl('f-upload').addEventListener('submit', async ev => {
+    ev.preventDefault(); if (!files.length) return toast('Escolha ao menos um arquivo.', true);
+    const f = new FormData(ev.target); const im = f.get('imovel_id') || null, cat = f.get('categoria'); const btn = gEl('up-btn'); btn.disabled = true; const prog = gEl('up-prog'); prog.classList.remove('hidden');
+    let n = 0;
+    for (const file of files) {
+      if (file.size > 50 * 1048576) { toast(file.name + ' passa de 50 MB — pulado.', true); continue; }
+      prog.textContent = `Subindo ${file.name} (${++n}/${files.length})…`;
+      const nome = file.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_');
+      const path = `${im || 'holding'}/${cat}/${Date.now()}_${nome}`;
+      const { error: e1 } = await sb.storage.from('documentos').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+      if (e1) { toast('Storage: ' + e1.message, true); continue; }
+      const { error: e2 } = await sb.from('documentos').insert({ imovel_id: im, categoria: cat, titulo: files.length > 1 ? `${f.get('titulo')} — ${file.name}` : f.get('titulo'), descricao: f.get('descricao') || null, caminho_storage: path, nome_arquivo: file.name, tamanho_bytes: file.size, mime: file.type || null, emitido_em: f.get('emitido_em') || null, validade: f.get('validade') || null, origem: 'upload', enviado_por: EU.id });
+      if (e2) toast('Índice: ' + e2.message, true);
+    }
+    if (im && f.get('checklist_item')) await sb.from('checklist').upsert({ imovel_id: im, item: f.get('checklist_item'), status: 'ok', observacao: 'Documento subido em ' + new Date().toLocaleDateString('pt-BR') });
+    fecharModal(); await recarregar('documentos', 'checklist', 'imoveis'); renderPaginaAtual(); if (im && gEl('drawer').classList.contains('open')) abrirFicha(im); toast('Documento(s) no acervo.');
+  });
+}
+function editarChecklist(imovelId, item) {
+  const c = DB.checklist.find(x => x.imovel_id === imovelId && x.item === item) || { status: 'falta', observacao: '' };
+  abrirModal(`<form id="f-chk" class="p-5 space-y-3"><div class="flex items-center justify-between"><h2 class="font-semibold text-slate-900">${imovelId} · ${CHK[item]}</h2><button type="button" class="text-slate-400" onclick="fecharModal()"><i data-feather="x"></i></button></div>
+    <div><label class="field-label">Status</label><div class="seg" id="chk-seg">${['ok', 'pendente', 'vencido', 'falta', 'na'].map(s => `<button type="button" class="${s === c.status ? 'on' : ''}" data-v="${s}">${s}</button>`).join('')}</div></div>
+    <div><label class="field-label">Observação</label><textarea name="observacao" class="field" rows="3">${esc(c.observacao || '')}</textarea></div>
+    <div class="flex justify-end gap-2"><button type="button" class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-primary">Salvar</button></div></form>`);
+  gEl('f-chk').addEventListener('submit', async ev => { ev.preventDefault(); const status = $('#chk-seg .on').dataset.v; const observacao = new FormData(ev.target).get('observacao') || null;
+    const { error } = await sb.from('checklist').upsert({ imovel_id: imovelId, item, status, observacao }); if (error) return toast('Não salvou: ' + error.message, true);
+    fecharModal(); await recarregar('checklist', 'imoveis'); renderPaginaAtual(); if (gEl('drawer').classList.contains('open')) abrirFicha(imovelId); toast('Checklist atualizado.'); });
+}
+
+/* =====================================================================
+   TAREFAS (kanban)
+   ===================================================================== */
+let tfFiltro = { im: '', resp: '', conc: false };
+function renderTarefas() {
+  const rows = DB.tarefas.filter(t => (!tfFiltro.im || t.imovel_id === tfFiltro.im) && (!tfFiltro.resp || t.responsavel_id === tfFiltro.resp) && t.status !== 'cancelada');
+  const cols = [['semana', 'Esta semana', 'blue'], ['andamento', 'Em andamento', 'amber'], ['backlog', 'Backlog', 'slate'], ['concluida', 'Concluídas', 'green']];
+  gEl('kanban').innerHTML = cols.map(([k, t, c]) => { let its = rows.filter(x => x.status === k); if (k === 'concluida') its = its.sort((a, b) => (b.concluida_em || '') > (a.concluida_em || '') ? 1 : -1).slice(0, tfFiltro.conc ? 200 : 8); else its = its.sort((a, b) => (a.ordem - b.ordem) || ((a.prazo || '9') < (b.prazo || '9') ? -1 : 1));
+    return `<div class="kan-col" data-col="${k}"><div class="flex items-center justify-between mb-2 px-1"><div class="text-xs font-semibold uppercase tracking-wide text-${c === 'slate' ? 'slate-600' : c + '-700'}">${t}</div><span class="badge badge-${c}">${its.length}</span></div>${its.map(x => kanCard(x)).join('') || '<div class="text-xs text-slate-400 px-1">—</div>'}</div>`; }).join('');
+  icons();
+}
+function kanCard(t) { const d = diasAte(t.prazo), atras = d !== null && d < 0 && t.status !== 'concluida'; const r = DB.pessoas.find(p => p.id === t.responsavel_id);
+  return `<div class="kan-card" onclick="abrirTarefa('${t.id}')"><div class="flex items-start gap-2"><div class="flex-1 text-slate-900 leading-snug">${esc(t.titulo)}</div>${badge(PRIO, t.prioridade)}</div>
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-[11px] text-slate-500">${t.imovel_id ? `<b class="text-slate-700">${t.imovel_id}</b>` : ''}${t.categoria ? `<span>${esc(t.categoria)}</span>` : ''}${t.prazo ? `<span class="${atras ? 'neg font-semibold' : ''}">${atras ? 'atrasada ' + (-d) + ' d' : 'até ' + dBR(t.prazo)}</span>` : ''}${t.impacto_anual ? `<span class="pos">${brl(t.impacto_anual)}/ano</span>` : ''}${t.origem === 'cfo' ? '<span class="badge badge-violet">CFO</span>' : ''}${r ? `<span class="ml-auto inline-flex items-center gap-1"><span class="w-4 h-4 rounded-full bg-blue-100 text-blue-700 grid place-items-center text-[9px] font-bold">${esc(r.nome[0])}</span>${esc(r.nome.split(' ')[0])}</span>` : ''}</div></div>`; }
+gEl('tf-imovel').addEventListener('change', e => { tfFiltro.im = e.target.value; renderTarefas(); });
+gEl('tf-resp').addEventListener('change', e => { tfFiltro.resp = e.target.value; renderTarefas(); });
+gEl('tf-concluidas').addEventListener('change', e => { tfFiltro.conc = e.target.checked; renderTarefas(); });
+gEl('btn-nova-tarefa').addEventListener('click', () => editarTarefa(null));
+function abrirTarefa(id) { editarTarefa(id); }
+function editarTarefa(id, imovelId) {
+  const t = id ? DB.tarefas.find(x => x.id === id) : { imovel_id: imovelId || '', prioridade: 'media', status: 'semana', origem: 'manual' };
+  const ro = !podeEditar();
+  const opt = (map, v) => Object.entries(map).map(([k, x]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${Array.isArray(x) ? x[0] : x}</option>`).join('');
+  abrirModal(`<form id="f-tarefa" class="p-5 space-y-3">
+    <div class="flex items-center justify-between gap-3"><h2 class="font-semibold text-slate-900">${id ? 'Tarefa' : 'Nova tarefa'}</h2><div class="flex items-center gap-2">${t.origem === 'cfo' ? '<span class="badge badge-violet">sugestão do CFO</span>' : ''}<button type="button" class="text-slate-400" onclick="fecharModal()"><i data-feather="x"></i></button></div></div>
+    <fieldset ${ro ? 'disabled' : ''} class="grid sm:grid-cols-2 gap-3">
+      <div class="sm:col-span-2"><label class="field-label">Título</label><input name="titulo" class="field" required value="${esc(t.titulo || '')}"></div>
+      <div class="sm:col-span-2"><label class="field-label">Descrição</label><textarea name="descricao" class="field" rows="5">${esc(t.descricao || '')}</textarea></div>
+      <div><label class="field-label">Status</label><select name="status" class="field">${opt(TSTAT, t.status)}</select></div>
+      <div><label class="field-label">Prioridade</label><select name="prioridade" class="field">${opt(PRIO, t.prioridade)}</select></div>
+      <div><label class="field-label">Imóvel</label><select name="imovel_id" class="field"><option value="">— portfólio —</option>${DB.imoveis.map(i => `<option value="${i.id}" ${i.id === t.imovel_id ? 'selected' : ''}>${i.id} — ${esc(nomeCurto(i.id))}</option>`).join('')}</select></div>
+      <div><label class="field-label">Responsável</label><select name="responsavel_id" class="field"><option value="">—</option>${DB.pessoas.filter(p => p.ativo).map(p => `<option value="${p.id}" ${p.id === t.responsavel_id ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></div>
+      <div><label class="field-label">Prazo</label><input name="prazo" type="date" class="field" value="${t.prazo || ''}"></div>
+      <div><label class="field-label">Categoria</label><input name="categoria" class="field" value="${esc(t.categoria || '')}" placeholder="Contrato, Documental, Obra…"></div>
+      <div><label class="field-label">Impacto estimado / ano (R$)</label><input name="impacto_anual" type="number" step="1000" class="field" value="${t.impacto_anual ?? ''}"></div>
+      <div><label class="field-label">Ordem</label><input name="ordem" type="number" class="field" value="${t.ordem ?? 100}"></div>
+    </fieldset>
+    <div class="flex justify-between gap-2 pt-2"><div>${id && eAdmin() ? `<button type="button" class="btn btn-danger btn-sm" onclick="excluir('tarefas','${id}','tarefas')">Excluir</button>` : ''}</div><div class="flex gap-2">${id && !ro && t.status !== 'concluida' ? `<button type="button" class="btn btn-ghost" onclick="moverTarefa('${id}','concluida')"><i data-feather="check" class="w-4 h-4"></i> Concluir</button>` : ''}${id && !ro && t.status === 'backlog' ? `<button type="button" class="btn btn-ghost" onclick="moverTarefa('${id}','semana')">→ Esta semana</button>` : ''}<button type="button" class="btn btn-ghost" onclick="fecharModal()">Fechar</button>${ro ? '' : '<button class="btn btn-primary">Salvar</button>'}</div></div></form>`);
+  gEl('f-tarefa').addEventListener('submit', async ev => {
+    ev.preventDefault(); const f = new FormData(ev.target); const o = {};
+    for (const [k, v] of f.entries()) o[k] = v === '' ? null : (['impacto_anual', 'ordem'].includes(k) ? Number(v) : v);
+    if (id) o.id = id; else { o.criado_por = EU.id; o.origem = 'manual'; }
+    const { error } = await sb.from('tarefas').upsert(o);
+    if (error) return toast('Não salvou: ' + error.message, true);
+    fecharModal(); await recarregar('tarefas', 'imoveis'); renderPaginaAtual(); if (gEl('drawer').classList.contains('open') && o.imovel_id) abrirFicha(o.imovel_id); toast('Tarefa salva.');
+  });
+}
+async function moverTarefa(id, status) {
+  const { error } = await sb.from('tarefas').update({ status }).eq('id', id); if (error) return toast('Não moveu: ' + error.message, true);
+  fecharModal(); await recarregar('tarefas', 'imoveis'); renderPaginaAtual(); toast(status === 'concluida' ? 'Tarefa concluída.' : 'Tarefa movida.');
+}
+
+/* =====================================================================
+   CAIXA
+   ===================================================================== */
+let cxSel = '';
+function renderCaixa() {
+  const sel = cxSel; const rows = DB.caixa.filter(r => sel === '' ? r.imovel_id !== null : (sel === '__holding__' ? r.imovel_id === null : r.imovel_id === sel));
+  const meses = Array.from(new Set(rows.map(r => r.competencia))).sort();
+  const agg = k => meses.map(m => rows.filter(r => r.competencia === m).reduce((s, r) => s + (N(r[k]) || 0), 0));
+  const rec = agg('receita'), opex = agg('opex'), div = agg('divida'), capex = agg('capex');
+  gEl('cx-titulo').textContent = (sel === '' ? 'Portfólio' : sel === '__holding__' ? 'Estrutura (holding)' : sel + ' — ' + nomeCurto(sel)) + ' · mês a mês';
+  grafico('ch-caixa', { type: 'bar', data: { labels: meses.map(mesBR), datasets: [
+      { label: 'Receita', data: rec, backgroundColor: C.green, fmt: brl, stack: 'a' },
+      { label: 'Opex', data: opex.map(v => -v), backgroundColor: C.amber, fmt: brl, stack: 'b' },
+      { label: 'Serviço da dívida', data: div.map(v => -v), backgroundColor: C.red, fmt: brl, stack: 'b' },
+      { label: 'Capex / obra', data: capex.map(v => -v), backgroundColor: C.slate, fmt: brl, stack: 'b' } ] },
+    options: gridOpts({ scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, ticks: { callback: v => brl(v) }, grid: { color: '#f1f5f9' } } }, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + brl(Math.abs(c.raw)) } } } }) });
+  const S = a => a.reduce((s, v) => s + v, 0);
+  gEl('cx-resumo').innerHTML = `<dt>Período</dt><dd>${meses.length ? mesBR(meses[0]) + ' – ' + mesBR(meses[meses.length - 1]) + ` (${meses.length} meses)` : '—'}</dd><dt>Receita</dt><dd class="pos font-medium">${brl(S(rec))}</dd><dt>Opex</dt><dd>${brl(S(opex))}</dd><dt>NOI</dt><dd class="font-semibold">${brl(S(rec) - S(opex))}</dd><dt>Serviço da dívida</dt><dd>${brl(S(div))}</dd><dt>Capex / obra</dt><dd>${brl(S(capex))}</dd><dt>Caixa líquido</dt><dd class="${S(rec) - S(opex) - S(div) - S(capex) < 0 ? 'neg' : 'pos'} font-semibold">${brl(S(rec) - S(opex) - S(div) - S(capex))}</dd>`;
+  $('#tab-caixa tbody').innerHTML = DB.imoveis.filter(i => i.receita_realizada_anual || i.opex_realizado_anual || i.divida_realizada_anual || i.capex_realizado_anual).sort((a, b) => N(b.noi_realizado_anual) - N(a.noi_realizado_anual)).map(i => `<tr class="click" data-ficha="${i.id}"><td class="font-semibold">${i.id}</td><td>${esc(nomeCurto(i.id))}${i.uso_proprio ? ' <span class="badge badge-slate">uso</span>' : ''}</td><td class="num pos">${brl(i.receita_realizada_anual)}</td><td class="num">${brl(i.opex_realizado_anual)}</td><td class="num font-medium ${N(i.noi_realizado_anual) < 0 ? 'neg' : ''}">${brl(i.noi_realizado_anual)}</td><td class="num">${brl(i.divida_realizada_anual)}</td><td class="num">${brl(i.capex_realizado_anual)}</td><td class="num">${pct(i.yield_realizado)}</td><td class="num">${pct(i.yield_contratado)}</td><td>${badge(META, i.status_meta)}</td></tr>`).join('');
+  carregarMovimentos();
+}
+async function carregarMovimentos() {
+  let qq = sb.from('movimentos').select('*').order('competencia', { ascending: false }).limit(300);
+  if (cxSel === '__holding__') qq = qq.is('imovel_id', null); else if (cxSel) qq = qq.eq('imovel_id', cxSel);
+  const rows = await q(qq); gEl('cx-lanc-hint').textContent = rows.length >= 300 ? 'últimos 300 lançamentos' : rows.length + ' lançamentos';
+  $('#tab-mov tbody').innerHTML = rows.map(m => `<tr><td>${mesBR(m.competencia)}</td><td class="font-semibold">${m.imovel_id || '<span class="text-slate-400">holding</span>'}</td><td class="text-xs">${m.tipo}${m.intra_grupo ? ' <span class="badge badge-slate">intra</span>' : ''}</td><td class="text-xs">${esc(m.grupo || '')}</td><td class="text-xs">${esc(m.subgrupo || m.descricao || '')}</td><td class="num ${m.tipo === 'receita' ? 'pos' : ''}">${brlx(m.valor)}</td><td class="text-xs">${esc(m.origem)}</td></tr>`).join('');
+}
+gEl('cx-imovel').addEventListener('change', e => { cxSel = e.target.value; renderCaixa(); });
+gEl('btn-novo-mov').addEventListener('click', () => {
+  abrirModal(`<form id="f-mov" class="p-5 space-y-3"><div class="flex items-center justify-between"><h2 class="font-semibold text-slate-900">Lançar movimento do mês</h2><button type="button" class="text-slate-400" onclick="fecharModal()"><i data-feather="x"></i></button></div>
+    <p class="text-xs text-slate-500">Um lançamento por imóvel, mês e tipo (pode somar os valores do mês). Receitas e despesas sempre positivas: o tipo diz o sinal.</p>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <div><label class="field-label">Imóvel</label><select name="imovel_id" class="field"><option value="">Estrutura (holding)</option>${DB.imoveis.map(i => `<option value="${i.id}" ${i.id === cxSel ? 'selected' : ''}>${i.id} — ${esc(nomeCurto(i.id))}</option>`).join('')}</select></div>
+      <div><label class="field-label">Competência (mês)</label><input name="competencia" type="month" class="field" required value="${hoje().slice(0, 7)}"></div>
+      <div><label class="field-label">Tipo</label><select name="tipo" class="field"><option value="receita">Receita</option><option value="opex">Opex (condomínio, IPTU, manutenção…)</option><option value="divida">Serviço da dívida</option><option value="capex">Capex / obra</option><option value="aporte">Aporte em participação</option></select></div>
+      <div><label class="field-label">Valor (R$)</label><input name="valor" type="number" step="0.01" min="0" class="field" required></div>
+      <div><label class="field-label">Grupo</label><input name="grupo" class="field" placeholder="ex.: RECEITA BRUTA"></div>
+      <div><label class="field-label">Subgrupo / descrição</label><input name="subgrupo" class="field" placeholder="ex.: ALUGUEL LOJAS VIA CAMPOS"></div>
+      <div class="sm:col-span-2 flex items-center gap-2"><input type="checkbox" name="intra_grupo" id="f-intra"><label for="f-intra" class="text-sm">Receita intra-grupo (paga por empresa do grupo)</label></div>
+    </div>
+    <div class="flex justify-end gap-2 pt-2"><button type="button" class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-primary">Lançar</button></div></form>`);
+  gEl('f-mov').addEventListener('submit', async ev => { ev.preventDefault(); const f = new FormData(ev.target);
+    const o = { imovel_id: f.get('imovel_id') || null, competencia: f.get('competencia') + '-01', tipo: f.get('tipo'), valor: Number(f.get('valor')), grupo: f.get('grupo') || null, subgrupo: f.get('subgrupo') || null, intra_grupo: f.get('intra_grupo') === 'on', origem: 'manual', criado_por: EU.id };
+    const { error } = await sb.from('movimentos').insert(o); if (error) return toast('Não lançou: ' + error.message, true);
+    fecharModal(); await recarregar('caixa', 'imoveis'); renderCaixa(); toast('Lançado.'); });
+});
+
+/* =====================================================================
+   ALERTAS
+   ===================================================================== */
+let alFiltro = { estado: 'aberto', sev: '' };
+function renderAlertas() {
+  const rows = DB.alertas.filter(a => a.estado === alFiltro.estado && (!alFiltro.sev || a.severidade === alFiltro.sev)).sort((a, b) => ({ alta: 0, media: 1, baixa: 2 }[a.severidade] - { alta: 0, media: 1, baixa: 2 }[b.severidade]) || ((a.prazo || '9') < (b.prazo || '9') ? -1 : 1));
+  gEl('al-lista').innerHTML = rows.map(a => alertaLinha(a, false)).join('') || '<div class="text-sm text-slate-500">Nada aqui.</div>'; icons();
+}
+gEl('al-filtro').addEventListener('seg', e => { alFiltro.estado = $('.on', e.target).dataset.v; renderAlertas(); });
+gEl('al-sev').addEventListener('seg', e => { alFiltro.sev = $('.on', e.target).dataset.v; renderAlertas(); });
+async function resolverAlerta(id, resolver) {
+  const { error } = await sb.from('alertas').update(resolver ? { estado: 'resolvido', resolvido_em: new Date().toISOString(), resolvido_por: EU.id } : { estado: 'aberto', resolvido_em: null, resolvido_por: null }).eq('id', id);
+  if (error) return toast('Não salvou: ' + error.message, true);
+  await recarregar('alertas', 'imoveis'); renderPaginaAtual(); toast(resolver ? 'Alerta resolvido.' : 'Alerta reaberto.');
+}
+async function alertaParaTarefa(id) {
+  const a = DB.alertas.find(x => x.id === id); if (!a) return;
+  const { error } = await sb.from('tarefas').insert({ titulo: (a.tema ? a.tema + ': ' : '') + a.texto.slice(0, 110), descricao: a.texto, imovel_id: a.imovel_id, prioridade: a.severidade === 'alta' ? 'alta' : a.severidade === 'media' ? 'media' : 'baixa', status: 'semana', prazo: a.prazo, categoria: a.tema, origem: 'cfo', criado_por: EU.id });
+  if (error) return toast('Não criou: ' + error.message, true);
+  await recarregar('tarefas', 'imoveis'); toast('Tarefa criada na semana.'); irPara('tarefas');
+}
+
+/* =====================================================================
+   EQUIPE (admin)
+   ===================================================================== */
+async function renderEquipe() {
+  const papel = { admin: ['Admin', 'blue'], operacional: ['Operacional', 'green'], leitura: ['Leitura', 'slate'] };
+  $('#tab-pessoas tbody').innerHTML = DB.pessoas.map(p => `<tr><td class="font-medium">${esc(p.nome)}</td><td>${esc(p.email)}</td><td>${badge(papel, p.papel)}</td><td>${p.ativo ? '<span class="badge badge-green">ativo</span>' : '<span class="badge badge-slate">inativo</span>'}</td><td class="text-xs">${p.ultimo_acesso ? new Date(p.ultimo_acesso).toLocaleString('pt-BR') : 'nunca'}</td><td><button class="btn btn-ghost btn-sm" onclick="editarPessoa('${p.id}')">Editar</button></td></tr>`).join('');
+  try { const aud = await q(sb.from('auditoria').select('criado_em, ator_email, acao, entidade, entidade_id').order('criado_em', { ascending: false }).limit(60));
+    $('#tab-aud tbody').innerHTML = aud.map(a => `<tr><td class="text-xs whitespace-nowrap">${new Date(a.criado_em).toLocaleString('pt-BR')}</td><td class="text-xs">${esc(a.ator_email)}</td><td class="text-xs">${a.acao}</td><td class="text-xs">${a.entidade}</td><td class="text-xs">${esc(a.entidade_id || '')}</td></tr>`).join(''); } catch (e) {}
+}
+gEl('btn-nova-pessoa').addEventListener('click', () => editarPessoa(null));
+function editarPessoa(id) {
+  const p = id ? DB.pessoas.find(x => x.id === id) : { papel: 'operacional', ativo: true };
+  abrirModal(`<form id="f-pessoa" class="p-5 space-y-3"><div class="flex items-center justify-between"><h2 class="font-semibold text-slate-900">${id ? 'Editar acesso' : 'Cadastrar pessoa'}</h2><button type="button" class="text-slate-400" onclick="fecharModal()"><i data-feather="x"></i></button></div>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <div><label class="field-label">Nome</label><input name="nome" class="field" required value="${esc(p.nome || '')}"></div>
+      <div><label class="field-label">E-mail</label><input name="email" type="email" class="field" required value="${esc(p.email || '')}" ${id ? 'readonly' : ''}></div>
+      <div><label class="field-label">Papel</label><select name="papel" class="field"><option value="leitura" ${p.papel === 'leitura' ? 'selected' : ''}>Leitura</option><option value="operacional" ${p.papel === 'operacional' ? 'selected' : ''}>Operacional</option><option value="admin" ${p.papel === 'admin' ? 'selected' : ''}>Admin</option></select></div>
+      <div class="flex items-end gap-2 pb-2"><input type="checkbox" name="ativo" id="f-ativo" ${p.ativo ? 'checked' : ''}><label for="f-ativo" class="text-sm">Acesso ativo</label></div>
+    </div>
+    <p class="text-xs text-slate-500">A pessoa entra com link mágico enviado para este e-mail. Desativar remove o acesso na hora, sem apagar o histórico.</p>
+    <div class="flex justify-end gap-2 pt-2"><button type="button" class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-primary">Salvar</button></div></form>`);
+  gEl('f-pessoa').addEventListener('submit', async ev => { ev.preventDefault(); const f = new FormData(ev.target);
+    const o = { nome: f.get('nome'), email: String(f.get('email')).trim().toLowerCase(), papel: f.get('papel'), ativo: f.get('ativo') === 'on' }; if (id) o.id = id;
+    const { error } = await sb.from('pessoas').upsert(o); if (error) return toast('Não salvou: ' + error.message, true);
+    fecharModal(); await recarregar('pessoas'); preencherSelects(); renderEquipe(); toast('Acesso salvo.'); });
+}
+</script>
+</body>
+</html>

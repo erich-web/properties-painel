@@ -1,0 +1,4 @@
+supabase/seed/
+.env
+*.preview.html
+build/
